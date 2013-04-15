@@ -352,6 +352,10 @@ EXCEPT DO
             PrintF('\s.\n', agsil_strerror(exceptioninfo))
         CASE AGSNAV_ERROR
             PrintF('\s.\n', agsnav_strerror(exceptioninfo))
+        CASE AGSCONF_ERROR
+            PrintF('\s.\n', agsconf_strerror(exceptioninfo))
+        CASE ILBM_ERROR
+            PrintF('\s\n', ilbm_strerror(exceptioninfo))
         CASE ERR_KICKSTART
             PrintF('Requires Kickstart 2.0+.\n')
         CASE ERR_JOYSTICK
