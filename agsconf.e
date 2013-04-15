@@ -26,6 +26,7 @@ EXPORT OBJECT agsconf
     depth:INT -> = 4
     textcolor:INT -> = 255
     bgcolor:INT -> = 254
+    lock_colors:INT -> = 4
 
     font:LONG -> PTR TO STRING -> topaz.font
     font_size:INT -> = 8
@@ -55,6 +56,7 @@ PROC init() OF agsconf
     self.depth := AGSCONF_AUTODETECT
     self.textcolor := 255
     self.bgcolor := 254
+    self.lock_colors := 4
     
     StrCopy(self.font, 'topaz.font')
     self.font_size := 8
@@ -102,6 +104,8 @@ PROC set_value(key:PTR TO CHAR, value:PTR TO CHAR) OF agsconf
             self.textcolor := num
         ELSEIF StrCmp(key, 'bgcolor')
             self.bgcolor := num
+        ELSEIF StrCmp(key, 'lock_colors')
+            self.lock_colors := num
         ELSEIF StrCmp(key, 'font_size')
             self.font_size := num
         ELSEIF StrCmp(key, 'menu_x')

@@ -309,7 +309,7 @@ PROC main() HANDLE
     IF (font := OpenFont(ta)) = NIL THEN Raise(ERR_FONT)
     SetFont(w.rport, font)
     
-    il.load_cmap(s.viewport)
+    il.load_cmap(s.viewport, 256)
     il.load_body(w.rport, 0, 0)
     il.close()
     END il
@@ -317,6 +317,7 @@ PROC main() HANDLE
     loader.wait_port()
     reply := loader.send_cmd(AGSIL_SETRPORT, w.rport)
     reply := loader.send_cmd(AGSIL_SETVPORT, s.viewport)
+    reply := loader.send_cmd(AGSIL_SETMAXCOLORS, Shl(1, s_depth) - conf.lock_colors)
     /* We loaded the background image directly using ilbmloader instead.
     reply := loader.send_cmd(AGSIL_SETXY, 0)
     reply := loader.send_cmd(AGSIL_LOAD, bkg_img)

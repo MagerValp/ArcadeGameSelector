@@ -169,31 +169,33 @@ EXPORT PROC parse_header() OF ilbmloader
 ENDPROC TRUE
 
 -> Load colormap into viewport.
-EXPORT PROC load_cmap(vport:PTR TO viewport) OF ilbmloader
+EXPORT PROC load_cmap(vport:PTR TO viewport, max_colors:LONG) OF ilbmloader
     DEF colors32:PTR TO LONG
     DEF colors4:PTR TO INT
     DEF i
     DEF offset
+    DEF ncolors
     
+    ncolors := Min(self.ncolors, max_colors)
     IF KickVersion(39)
-        NEW colors32[(self.ncolors * 3) + 2]
-        colors32[0] := Shl(self.ncolors, 16)
-        colors32[(self.ncolors * 3) + 1] := 0
-        FOR i := 0 TO self.ncolors - 1
+        NEW colors32[(ncolors * 3) + 2]
+        colors32[0] := Shl(ncolors, 16)
+        colors32[(ncolors * 3) + 1] := 0
+        FOR i := 0 TO ncolors - 1
             offset := (i * 3) + 1
             colors32[offset]     := Shl(self.colormap[i].r, 24)
             colors32[offset + 1] := Shl(self.colormap[i].g, 24)
             colors32[offset + 2] := Shl(self.colormap[i].b, 24)
         ENDFOR
         LoadRGB32(vport, colors32)
-        END colors32[(self.ncolors * 3) + 2]
+        END colors32[(ncolors * 3) + 2]
     ELSE
-        NEW colors4[self.ncolors]
-        FOR i := 0 TO self.ncolors - 1
+        NEW colors4[ncolors]
+        FOR i := 0 TO ncolors - 1
             colors4[i] := Shl(self.colormap[i].r AND $f0, 4) OR (self.colormap[i].g AND $f0) OR Shr(self.colormap[i].b, 4)
         ENDFOR
-        LoadRGB4(vport, colors4, self.ncolors)
-        END colors4[self.ncolors]
+        LoadRGB4(vport, colors4, ncolors)
+        END colors4[ncolors]
     ENDIF
 ENDPROC
 

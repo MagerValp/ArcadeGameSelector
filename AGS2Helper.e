@@ -32,6 +32,7 @@ OBJECT loader
     vport:PTR TO viewport
     x:INT
     y:INT
+    max_colors:INT
     img_num:LONG
     img_path
     img_loaded:LONG
@@ -58,6 +59,8 @@ PROC softint_handler(ldr:PTR TO loader)
         CASE AGSIL_SETXY
             ldr.x := Shr(msg.arg, 16)
             ldr.y := msg.arg AND $ffff
+        CASE AGSIL_SETMAXCOLORS
+            ldr.max_colors := msg.arg
         CASE AGSIL_LOAD
             IF (ldr.rport = NIL) OR (ldr.vport = NIL)
                 msg.reply := -1
@@ -133,7 +136,7 @@ PROC main() HANDLE
                 IF il.parse_header() = FALSE
                     PrintF('\s failed header parsing\n', path)
                 ELSE
-                    il.load_cmap(ldr.vport)
+                    il.load_cmap(ldr.vport, ldr.max_colors)
                     bmark.mark() -> 0
                     il.load_body(ldr.rport, ldr.x, ldr.y)
                     bmark.mark() -> 1
