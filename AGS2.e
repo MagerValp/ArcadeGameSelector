@@ -4,6 +4,7 @@
 OPT PREPROCESS
 
 
+MODULE 'dos/dos'
 MODULE 'intuition/intuition'
 MODULE 'intuition/screens'
 MODULE 'graphics/modeid'
@@ -23,7 +24,10 @@ ENUM ERR_KICKSTART = 1,
      ERR_WINDOW,
      ERR_FONT,
      ERR_BACKGROUND,
-     ERR_EMPTY
+     ERR_EMPTY,
+     ERR_COPY_SRC,
+     ERR_COPY_DST,
+     ERR_COPY_WRITE
 
 
 OBJECT ags
@@ -49,6 +53,29 @@ ENDPROC
 
 PROC end() OF ags
 ENDPROC
+
+CONST COPY_BUF_SIZE = 128
+
+PROC copy_file(src_path:PTR TO CHAR, dst_path:PTR TO CHAR) HANDLE
+    DEF len
+    DEF src_fh = NIL
+    DEF dst_fh = NIL
+    DEF buf[COPY_BUF_SIZE]:ARRAY OF CHAR
+
+    IF (src_fh := Open(src_path, MODE_OLDFILE)) = NIL THEN Raise(ERR_COPY_SRC)
+    IF (dst_fh := Open(dst_path, MODE_NEWFILE)) = NIL THEN Raise(ERR_COPY_DST)
+    WHILE (len := Read(src_fh, buf, COPY_BUF_SIZE)) > 0
+        IF Write(dst_fh, buf, len) <> len THEN Raise(ERR_COPY_WRITE)
+    ENDWHILE
+EXCEPT DO
+    IF src_fh THEN Close(src_fh)
+    IF dst_fh THEN Close(dst_fh)
+    IF exception
+        PrintF('Copying \s to \s: ')
+    ENDIF
+    ReThrow()
+ENDPROC
+
 
 CONST REPEAT_DELAY = 8
 CONST RAWKEY_Q      = 16
@@ -154,6 +181,13 @@ PROC select() OF ags
                     self.reload()
                     screenshot_ctr := 0
                 ENDIF
+            ELSE
+                StrCopy(path, self.nav.path)
+                StrAdd(path, item.name)
+                StrAdd(path, '.run')
+                copy_file(path, 'RAM:AGS.run')
+                screenshot_ctr := (REPEAT_DELAY + 2) -> Avoid loading now.
+                quit := TRUE
             ENDIF
             REPEAT
                 portstate := ReadJoyPort(1)
@@ -371,6 +405,12 @@ EXCEPT DO
             PrintF('Couldn''t load background image.\n')
         CASE ERR_EMPTY
             PrintF('Menu is empty, nothing to select.\n')
+        CASE ERR_COPY_SRC
+            PrintF('Error opening source.\n')
+        CASE ERR_COPY_DST
+            PrintF('Error opening destination.\n')
+        CASE ERR_COPY_WRITE
+            PrintF('Error writing run script.\n')
         DEFAULT
             IF exception
                 PrintF('Unknown exception "\s" / $\h[08]\n',
