@@ -79,7 +79,7 @@ PROC start() OF agsil_master
     DEF console
     
     console := Open('CON:0/40/640/150/irqimgloader/auto/close/wait', OLDFILE)
-    result := SystemTagList('AGS:irqimgloader', [
+    result := SystemTagList('AGS:AGS2Helper', [
         SYS_ASYNCH, TRUE,
         SYS_INPUT, console,
         SYS_OUTPUT, NIL,
