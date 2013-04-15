@@ -1,3 +1,9 @@
 .DS_Store
 *.m
 *.uaem
+AGS.tmproj
+*.info
+*.iff
+!AGS2Background.iff
+!Empty.iff
+*.ags
