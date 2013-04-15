@@ -24,7 +24,9 @@ EXPORT OBJECT agsconf
     background:LONG -> PTR TO STRING -> AGS:AGS2Background.iff
     mode:LONG -> = $29000
     depth:INT -> = 4
-    
+    textcolor:INT -> = 255
+    bgcolor:INT -> = 254
+
     font:LONG -> PTR TO STRING -> topaz.font
     font_size:INT -> = 8
     
@@ -51,6 +53,8 @@ PROC init() OF agsconf
     StrCopy(self.background, 'AGS:AGS2Background.iff')
     self.mode := AGSCONF_AUTODETECT
     self.depth := AGSCONF_AUTODETECT
+    self.textcolor := 255
+    self.bgcolor := 254
     
     StrCopy(self.font, 'topaz.font')
     self.font_size := 8
@@ -94,6 +98,10 @@ PROC set_value(key:PTR TO CHAR, value:PTR TO CHAR) OF agsconf
             self.mode := num
         ELSEIF StrCmp(key, 'depth')
             self.depth := num
+        ELSEIF StrCmp(key, 'textcolor')
+            self.textcolor := num
+        ELSEIF StrCmp(key, 'bgcolor')
+            self.bgcolor := num
         ELSEIF StrCmp(key, 'font_size')
             self.font_size := num
         ELSEIF StrCmp(key, 'menu_x')

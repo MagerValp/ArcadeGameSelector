@@ -187,7 +187,7 @@ PROC redraw(start=0, end=-1) OF ags
     empty := '                          ' -> Used for padding.
     IF end = -1
         IF self.nav.num_items < self.conf.menu_height
-            SetAPen(self.rport, 254)
+            SetAPen(self.rport, self.conf.bgcolor)
             RectFill(self.rport,
                      self.conf.menu_x,
                      self.conf.menu_y + (self.conf.font_size * self.nav.num_items),
@@ -196,8 +196,8 @@ PROC redraw(start=0, end=-1) OF ags
         ENDIF
         end := self.conf.menu_height - 1
     ENDIF
-    SetAPen(self.rport, 255)
-    SetBPen(self.rport, 254)
+    SetAPen(self.rport, self.conf.textcolor)
+    SetBPen(self.rport, self.conf.bgcolor)
     FOR line := start TO end
         IF line < self.nav.num_items
             IF self.current_item = line
