@@ -10,5 +10,5 @@ AGS.tmproj
 *.run
 *.zip
 [A-Z]*.txt
-ags2
-irqimgloader
+AGS2
+AGS2Helper
