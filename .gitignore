@@ -7,3 +7,8 @@ AGS.tmproj
 !AGS2Background.iff
 !Empty.iff
 *.ags
+*.run
+*.zip
+[A-Z]*.txt
+ags2
+irqimgloader
