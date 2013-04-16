@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+# -*- coding: utf-8 -*-
 
 import sys
 import optparse
@@ -11,6 +11,7 @@ except ImportError:
 import array
 import math
 import struct
+import cStringIO as StringIO
 
 
 def packbits(data):
@@ -127,6 +128,101 @@ def unpackbits(data):
 
     return bytes(result)
 
+# Converted from lz78.c by Ray/tSCc.
+LZ78_BITS =             12
+LZ78_HASHING_SHIFT =    LZ78_BITS - 8
+LZ78_LALIGN =           32 - LZ78_BITS
+LZ78_MAX_VALUE =        (1 << LZ78_BITS) - 1
+LZ78_MAX_CODE =         LZ78_MAX_VALUE - 1
+if LZ78_BITS == 14:
+    LZ78_TABLE_SIZE = 18041
+elif LZ78_BITS == 13:
+    LZ78_TABLE_SIZE = 9029
+elif LZ78_BITS == 12:
+    LZ78_TABLE_SIZE = 5021
+
+code_value =       array.array("i", (0 for i in xrange(LZ78_TABLE_SIZE)))
+prefix_code =      array.array("i", (0 for i in xrange(LZ78_TABLE_SIZE)))
+append_character = array.array("B", (0 for i in xrange(LZ78_TABLE_SIZE)))
+
+output_bit_count = 0
+output_bit_buffer = 0
+
+def output_code(outp, code):
+    global output_bit_count
+    global output_bit_buffer
+    
+    output_bit_buffer |= code << (LZ78_LALIGN - output_bit_count)
+    output_bit_count += LZ78_BITS
+    while output_bit_count >= 8:
+        outp.write(chr((output_bit_buffer >> 24) & 0xff))
+        output_bit_buffer <<= 8
+        output_bit_count -= 8
+
+def find_match(hash_prefix, hash_character):
+    global code_value
+    global prefix_code
+    global append_character
+    
+    index = (hash_character << LZ78_HASHING_SHIFT) ^ hash_prefix
+    if index == 0:
+        offset = 1
+    else:
+        offset = LZ78_TABLE_SIZE - index
+    while True:
+        if code_value[index] == -1:
+            return index
+        if (prefix_code[index] == hash_prefix) and (append_character[index] == hash_character):
+            return index
+        index -= offset
+        if index < 0:
+            index += LZ78_TABLE_SIZE
+
+def lz78pack(data):
+    global code_value
+    global prefix_code
+    global append_character
+    global output_bit_count
+    global output_bit_buffer
+    
+    output_bit_count = 0
+    output_bit_buffer = 0
+    for i in xrange(LZ78_TABLE_SIZE):
+        code_value[i] = -1
+        prefix_code[i] = 0
+        append_character[i] = 0
+    
+    inp = StringIO.StringIO(data)
+    outp = StringIO.StringIO()
+    
+    outp.write(struct.pack(">L", len(data)))
+    
+    next_code = 256
+    
+    string_code = ord(inp.read(1))
+    while True:
+        c = inp.read(1)
+        if c == "":
+            break
+        character = ord(c)
+        index = find_match(string_code, character)
+        if code_value[index] != -1:
+            string_code = code_value[index]
+        else:
+            if next_code <= LZ78_MAX_CODE:
+                code_value[index] = next_code
+                next_code += 1
+                prefix_code[index] = string_code
+                append_character[index] = character
+            output_code(outp, string_code)
+            string_code = character
+    
+    output_code(outp, string_code)
+    output_code(outp, LZ78_MAX_VALUE)
+    output_code(outp, 0)
+    
+    return outp.getvalue()
+
 def iff_chunk(id, *args):
     chunk_len = 0
     data = list()
@@ -143,14 +239,42 @@ def zeros(len):
     for i in xrange(len):
         yield 0
 
-def create_ilbm(width, height, pixels, palette, mode):
-    # Calculate dimensions.
+def create_header(width, height, palette, mode, pack):
     depth = int(math.ceil(math.log(len(palette), 2)))
+    # Create IFF chunks for header.
+    bmhd = iff_chunk("BMHD", struct.pack(">HHHHBBBxHBBHH",
+        width,  # w:INT
+        height, # h:INT
+        0,      # x:INT
+        0,      # y:INT
+        depth,  # nplanes:CHAR
+        0,      # masking:CHAR
+        pack,   # compression:CHAR
+                # pad:CHAR
+        0,      # transparentcolor:INT
+        60,     # xaspect:CHAR
+        60,     # yaspect:CHAR
+        width,  # pagewidth:INT
+        height, # pageheight:INT
+    ))
+    
+    cmap = iff_chunk("CMAP", "".join(struct.pack("BBB", r, g, b) for (r, g, b) in palette))
+    
+    if mode is not None:
+        camg = iff_chunk("CAMG", struct.pack(">L", mode))
+    else:
+        camg = ""
+    
+    return depth, bmhd, cmap, camg
+
+def convert_planar(width, height, depth, pixels):
+    # Calculate dimensions.
     plane_width = ((width + 15) / 16) * 16
     bpr = plane_width / 8
     plane_size = bpr * height
+    
     # Convert image to planar bitmap.
-    planes = tuple(array.array("B", [0 for i in xrange(plane_size)]) for j in xrange(depth))
+    planes = tuple(array.array("B", (0 for i in xrange(plane_size))) for j in xrange(depth))
     for y in xrange(height):
         rowoffset = y * bpr
         for x in xrange(width):
@@ -159,34 +283,42 @@ def create_ilbm(width, height, pixels, palette, mode):
             p = pixels[x, y]
             for plane in xrange(depth):
                 planes[plane][offset] |= ((p >> plane) & 1) << xmod
+    
+    return bpr, planes
+
+def create_ilbm(width, height, pixels, palette, mode, pack):
+    # Get header.
+    depth, bmhd, cmap, camg = create_header(width, height, palette, mode, pack)
+    # Get planar bitmap.
+    bpr, planes = convert_planar(width, height, depth, pixels)
     # Create interleaved bitmap.
     rows = list()
     for y in xrange(height):
         for row in (planes[plane][y * bpr:y * bpr + bpr].tostring() for plane in xrange(depth)):
             rows.append(row)
-    # Create IFF chunks.
-    bmhd = iff_chunk("BMHD", struct.pack(">HHHHBBBxHBBHH",
-        width,  # w:INT
-        height, # h:INT
-        0,      # x:INT
-        0,      # y:INT
-        depth,  # nplanes:CHAR
-        0,      # masking:CHAR
-        1,      # compression:CHAR
-                # pad:CHAR
-        0,      # transparentcolor:INT
-        60,     # xaspect:CHAR
-        60,     # yaspect:CHAR
-        width,  # pagewidth:INT
-        height, # pageheight:INT
-    ))
-    cmap = iff_chunk("CMAP", "".join(struct.pack("BBB", r, g, b) for (r, g, b) in palette))
-    if mode is not None:
-        camg = iff_chunk("CAMG", struct.pack(">L", mode))
-    else:
-        camg = ""
-    body = iff_chunk("BODY", "".join(packbits(r) for r in rows))
+    
+    if pack == 0:       # No compression.
+        body = iff_chunk("BODY", "".join(r for r in rows))
+    elif pack == 1:     # Packbits.
+        body = iff_chunk("BODY", "".join(packbits(r) for r in rows))
+    
     form = iff_chunk("FORM", "ILBM", bmhd, cmap, camg, body)
+    return form
+
+def create_acbm(width, height, pixels, palette, mode, pack):
+    # Get header.
+    depth, bmhd, cmap, camg = create_header(width, height, palette, mode, pack)
+    # Get planar bitmap.
+    bpr, planes = convert_planar(width, height, depth, pixels)
+    
+    if pack == 0:       # No compression.
+        abit = iff_chunk("ABIT", "".join(p.tostring() for p in planes))
+    elif pack == 1:     # Packbits.
+        abit = iff_chunk("ABIT", "".join(packbits(p.tostring()) for p in planes))
+    elif pack == 78:    # LZ78 by Ray of tSCc.
+        abit = iff_chunk("ABIT", lz78pack("".join(p.tostring() for p in planes)))
+    
+    form = iff_chunk("FORM", "ACBM", bmhd, cmap, camg, abit)
     return form
     
 
@@ -203,6 +335,8 @@ def main(argv):
     p.add_option("-c", "--colors", type="int", action="store", help="Max number of colors.")
     p.add_option("-d", "--dither", action="store_true", help="Dither when resampling.")
     p.add_option("-m", "--mode", type="int", action="store", help="Amiga display mode ID.")
+    p.add_option("-p", "--pack", type="int", action="store", default=None, help="Select compression algorithm.")
+    p.add_option("-f", "--format", action="store", default="ILBM", help="ILBM or ACBM.")
     options, argv = p.parse_args(argv)
     if len(argv) != 3:
         print >>sys.stderr, p.get_usage()
@@ -235,6 +369,14 @@ def main(argv):
         dither = Image.FLOYDSTEINBERG
     else:
         dither = Image.NONE
+    
+    if options.pack is None:
+        if options.format.upper() == "ILBM":
+            pack = 1
+        else:
+            pack = 0
+    else:
+        pack = options.pack
     
     # Image conversion.
     
@@ -286,7 +428,13 @@ def main(argv):
     pixels = new_image.load()
     width, height = new_image.size
     with open(outfile, "wb") as f:
-        f.write(create_ilbm(width, height, pixels, palette, options.mode))
+        if options.format.upper() == "ILBM":
+            f.write(create_ilbm(width, height, pixels, palette, options.mode, pack))
+        elif options.format.upper() == "ACBM":
+            f.write(create_acbm(width, height, pixels, palette, options.mode, pack))
+        else:
+            print >>sys.stderr, "Unsupported format"
+            return 1
     
     return 0
     
