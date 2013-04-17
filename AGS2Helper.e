@@ -157,7 +157,6 @@ PROC main() HANDLE
 EXCEPT DO
     END il
     IF port
-        ->PrintF('Deleting \s.\n', AGSIL_PORTNAME)
         IF port.ln.name THEN RemPort(port)
         port.sigtask := -1
         port.msglist.head := -1
@@ -171,14 +170,16 @@ EXCEPT DO
         CASE ERR_ECODE
             PrintF('eCode() failed\n')
         CASE ERR_CREATEPORT
-            PrintF('Couldn''t create "\s"\n', AGSIL_PORTNAME)
+            PrintF('Couldn''t create "' + AGSIL_PORTNAME + '"\n')
         CASE ILBM_ERROR
             PrintF('\s\n', ilbm_strerror(exceptioninfo))
         DEFAULT
             IF exception
-                PrintF('Unknown exception "\s" / $\h[08]\n',
-                       [exception, 0],
-                       exception)
+                IF exception < 10000
+                    PrintF('Unknown exception \d\n', exception)
+                ELSE
+                    PrintF('Unknown exception "\s"', [exception, 0])
+                ENDIF
             ENDIF
     ENDSELECT
 ENDPROC

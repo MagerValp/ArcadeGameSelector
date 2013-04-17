@@ -414,9 +414,11 @@ EXCEPT DO
             PrintF('Error writing run script.\n')
         DEFAULT
             IF exception
-                PrintF('Unknown exception "\s" / $\h[08]\n',
-                       [exception, 0],
-                       exception)
+                IF exception < 10000
+                    PrintF('Unknown exception \d\n', exception)
+                ELSE
+                    PrintF('Unknown exception "\s"', [exception, 0])
+                ENDIF
             ENDIF
     ENDSELECT
 ENDPROC
