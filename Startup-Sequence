@@ -1,12 +1,6 @@
 C:SetPatch >NIL:
 Assign AGS: SYS:AGS
 
-Lab loop
 AGS:AGS2
-If EXISTS RAM:AGS.run
-    Execute RAM:AGS.run
-    Delete RAM:AGS.run QUIET >NIL:
-    Skip loop
-EndIf
 
 ; Startup-Sequence continues here if no game is selected.

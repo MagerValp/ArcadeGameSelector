@@ -12,10 +12,12 @@ EC=ec
 	$(EC) $< $(ECFLAGS)
 
 
-all: AGS2 AGS2Helper
+all: AGS2 AGS2Menu AGS2Helper
 
 
-AGS2: AGS2.e agsil.m agsnav.m agsconf.m ilbmloader.m
+AGS2: AGS2.e agsdefs.m
+
+AGS2Menu: AGS2Menu.e agsil.m agsnav.m agsconf.m ilbmloader.m
 
 AGS2Helper: AGS2Helper.e agsil.m ilbmloader.m benchmark.m
 
@@ -23,7 +25,9 @@ AGS2Helper: AGS2Helper.e agsil.m ilbmloader.m benchmark.m
 .PHONY: clean
 clean:
 	Delete AGS2 QUIET >NIL:
+	Delete AGS2Menu QUIET >NIL:
 	Delete AGS2Helper QUIET >NIL:
+	Delete agsdefs.m QUIET >NIL:
 	Delete agsil.m QUIET >NIL:
 	Delete agsnav.m QUIET >NIL:
 	Delete agsconf.m QUIET >NIL:
