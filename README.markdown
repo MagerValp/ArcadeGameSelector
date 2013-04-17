@@ -19,20 +19,14 @@ For users of version 1 a number of things have improved:
 Installation
 ------------
 
-Copy `AGS2`, `AGS2Helper`, `AGS2.conf`, `AGS2Background.iff`, and `Empty.iff` into `AGS:`. Copy `Startup-Sequence` to `S:` for AGS to start automatically. For each game that you wish to run create a script with the commands necessary to start it and give it a `.run` extension. You can also add a screenshot, with a .iff extension.
+Copy `AGS2`, `AGS2Helper`, `AGS2.conf`, `AGS2Background.iff`, and `Empty.iff` into `AGS:`. Copy `Startup-Sequence` to `S:` for AGS to start automatically. For each game that you wish to run create a script with the commands necessary to start it and give it a `.run` extension. You can also add a screenshot with a `.iff` extension and information with a `.txt` extension.
 
-When you select a game, its script is copied to `RAM:AGS.run` and AGS exits. The Startup-Sequence picks it up and executes it:
+Place AGS:AGS2 in the Startup-Sequence after SetPatch and Assign AGS:
 
     C:SetPatch >NIL:
     Assign AGS: SYS:AGS
     
-    Lab loop
     AGS:AGS2
-    If EXISTS RAM:AGS.run
-        Execute RAM:AGS.run
-        Delete RAM:AGS.run QUIET >NIL:
-        Skip loop
-    EndIf
     
     ; Startup-Sequence continues here if no game is selected.
 
