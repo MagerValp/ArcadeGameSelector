@@ -13,6 +13,7 @@ ENUM ERR_MENU = 1,
      ERR_DELETE
 
 #define AGS_MENU_PATH 'AGS:AGS2Menu'
+#define AGS_EXECUTE_COMMAND 'Execute ' + AGS_RUN_PATH
 
 
 PROC main() HANDLE
@@ -23,7 +24,7 @@ PROC main() HANDLE
         -> Check if there's a RAM:AGS.run for us, otherwise exit.
         IF FileLength(AGS_RUN_PATH) = -1 THEN RETURN
         -> Execute RAM:AGS.run.
-        IF SystemTagList(AGS_RUN_PATH, [NIL]) = -1 THEN Raise(ERR_RUN)
+        IF SystemTagList(AGS_EXECUTE_COMMAND, [NIL]) = -1 THEN Raise(ERR_RUN)
         -> Delete RAM:AGS.run.
         IF DeleteFile(AGS_RUN_PATH) = FALSE THEN Raise(ERR_DELETE)
     ENDLOOP
