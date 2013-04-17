@@ -17,7 +17,7 @@ all: AGS2 AGS2Menu AGS2Helper
 
 AGS2: AGS2.e agsdefs.m
 
-AGS2Menu: AGS2Menu.e agsil.m agsnav.m agsconf.m ilbmloader.m
+AGS2Menu: AGS2Menu.e agsil.m agsnav.m agsconf.m ilbmloader.m agsdefs.m
 
 AGS2Helper: AGS2Helper.e agsil.m ilbmloader.m benchmark.m
 

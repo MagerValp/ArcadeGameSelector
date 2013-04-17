@@ -16,6 +16,7 @@ MODULE '*ilbmloader'
 MODULE '*agsil'
 MODULE '*agsnav'
 MODULE '*agsconf'
+MODULE '*agsdefs'
 
 
 ENUM ERR_KICKSTART = 1,
@@ -185,7 +186,7 @@ PROC select() OF ags
                 StrCopy(path, self.nav.path)
                 StrAdd(path, item.name)
                 StrAdd(path, '.run')
-                copy_file(path, 'RAM:AGS.run')
+                copy_file(path, AGS_RUN_PATH)
                 screenshot_ctr := (REPEAT_DELAY + 2) -> Avoid loading now.
                 quit := TRUE
             ENDIF
