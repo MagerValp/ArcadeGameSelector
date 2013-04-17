@@ -93,6 +93,8 @@ PROC set_value(key:PTR TO CHAR, value:PTR TO CHAR) OF agsconf
         StrCopy(self.background, value)
     ELSEIF StrCmp(key, 'font')
         StrCopy(self.font, value)
+    ELSEIF StrCmp(key, 'empty_screenshot')
+        StrCopy(self.empty_screenshot, value)
     ELSE
         num, read := Val(value)
         IF read = 0 THEN Throw(AGSCONF_ERROR, AGSCONF_ERR_VALUE)
