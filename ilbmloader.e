@@ -10,6 +10,7 @@ MODULE 'graphics/rastport'
 MODULE 'graphics/view'
 MODULE 'iffparse'
 MODULE 'libraries/iffparse'
+MODULE '*rgbcolor'
 
 
 EXPORT CONST ILBM_ERROR = "ILBM"
@@ -46,12 +47,6 @@ OBJECT ilbm_bmhd
     yaspect:CHAR
     pagewidth:INT
     pageheight:INT
-ENDOBJECT
-
-OBJECT rgbcolor
-    r:CHAR
-    g:CHAR
-    b:CHAR
 ENDOBJECT
 
 EXPORT OBJECT ilbmloader
