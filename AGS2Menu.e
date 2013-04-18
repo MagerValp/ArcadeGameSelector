@@ -17,6 +17,7 @@ MODULE '*agsil'
 MODULE '*agsnav'
 MODULE '*agsconf'
 MODULE '*agsdefs'
+MODULE '*palfade'
 
 
 ENUM ERR_KICKSTART = 1,
@@ -344,8 +345,10 @@ PROC main() HANDLE
     IF (font := OpenFont(ta)) = NIL THEN Raise(ERR_FONT)
     SetFont(w.rport, font)
     
-    il.load_cmap(s.viewport, 256)
+    fade_out_vport(s.viewport, Shl(1, s_depth), 1) -> Clear palette to black.
     il.load_body(w.rport, 0, 0)
+    ScreenToFront(s)
+    fade_in_vport(il.colormap, s.viewport, Shl(1, s_depth), 10)
     il.close()
     END il
     
@@ -361,12 +364,12 @@ PROC main() HANDLE
     */
     xy := Shl(conf.screenshot_x, 16) OR conf.screenshot_y
     reply := loader.send_cmd(AGSIL_SETXY, xy)
-    ScreenToFront(s)
     
     NEW nav.init()
     
     NEW ags.init(conf, nav, loader, w.rport)
     ags.select()
+    fade_out_vport(s.viewport, Shl(1, s_depth), 10)
     
     loader.stop()
 

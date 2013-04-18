@@ -17,9 +17,9 @@ all: AGS2 AGS2Menu AGS2Helper
 
 AGS2: AGS2.e agsdefs.m
 
-AGS2Menu: AGS2Menu.e agsil.m agsnav.m agsconf.m rgbcolor.m ilbmloader.m agsdefs.m
+AGS2Menu: AGS2Menu.e agsil.m agsnav.m agsconf.m rgbcolor.m ilbmloader.m palfade.m agsdefs.m
 
-AGS2Helper: AGS2Helper.e agsil.m rgbcolor.m ilbmloader.m benchmark.m
+AGS2Helper: AGS2Helper.e agsil.m rgbcolor.m ilbmloader.m palfade.m benchmark.m
 
 
 .PHONY: clean
