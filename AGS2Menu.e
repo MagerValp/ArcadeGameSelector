@@ -199,6 +199,7 @@ PROC select() OF ags
         
         IF screenshot_ctr++ = (REPEAT_DELAY + 1)
             self.load_screenshot()
+            self.load_text()
         ENDIF
         
     UNTIL quit
@@ -255,19 +256,82 @@ PROC redraw(start=0, end=-1) OF ags
     ENDFOR
 ENDPROC
 
-PROC load_screenshot() OF ags
-    DEF path[100]:STRING
+PROC get_item_path(path:LONG, suffix:PTR TO CHAR) OF ags
     DEF item:PTR TO agsnav_item
     
     item := self.nav.items[self.current_item + self.offset]
     StrCopy(path, self.nav.path)
     StrAdd(path, item.name)
-    StrAdd(path, '.iff')
+    StrAdd(path, suffix)
+ENDPROC
+
+PROC load_screenshot() OF ags
+    DEF path[100]:STRING
+    
+    self.get_item_path(path, '.iff')
     IF FileLength(path) = -1
         self.loader.send_cmd(AGSIL_LOAD, self.conf.empty_screenshot)
     ELSE
         self.loader.send_cmd(AGSIL_LOAD, path)
     ENDIF
+ENDPROC
+
+PROC load_text() OF ags HANDLE
+    DEF path[100]:STRING
+    DEF len
+    DEF line = NIL
+    DEF bufsize = 0
+    DEF adjust_read
+    DEF fh = NIL
+    DEF linenum = 0
+    DEF y
+    
+    IF self.conf.text_height = 0 THEN Raise(0)
+    
+    SetAPen(self.rport, self.conf.bgcolor)
+    RectFill(self.rport,
+             self.conf.text_x,
+             self.conf.text_y,
+             self.conf.text_x + (self.conf.text_width * 8) - 1, -> FIXME: calculate
+             self.conf.text_y + (self.conf.font_size * self.conf.text_height) - 1)
+    
+    self.get_item_path(path, '.txt')
+    IF FileLength(path) = -1 THEN Raise(0)
+    
+    bufsize := self.conf.text_width + 2
+    line := String(bufsize)
+    -> Work around Fgets() bug in V36/V37.
+    IF KickVersion(39) THEN adjust_read := 0 ELSE adjust_read := 1
+    
+    SetAPen(self.rport, self.conf.textcolor)
+    SetBPen(self.rport, self.conf.bgcolor)
+    SetDrMd(self.rport, RP_JAM2)
+    IF (fh := Open(path, OLDFILE)) = NIL THEN Raise(0)
+    WHILE (linenum < self.conf.text_height) AND Fgets(fh, line, bufsize - adjust_read)
+        len := StrLen(line)
+        -> Trim trailing newline.
+        IF len > 0
+            IF (line[len - 1] = "\n")
+                DEC len
+                line[len] := 0
+            ENDIF
+        ENDIF
+        -> Fix estring length.
+        SetStr(line, len)
+        
+        IF len > 0
+            y := self.conf.text_y +
+                 self.rport.font.baseline +
+                 (self.conf.font_size * linenum)
+            Move(self.rport, self.conf.text_x, y)
+            Text(self.rport, line, len)
+        ENDIF
+        
+        INC linenum
+    ENDWHILE
+    
+EXCEPT DO
+    IF bufsize THEN END line[bufsize]
 ENDPROC
 
 
