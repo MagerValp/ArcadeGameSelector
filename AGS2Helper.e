@@ -16,6 +16,7 @@ MODULE 'graphics/view'
 MODULE '*benchmark'
 MODULE '*agsil'
 MODULE '*ilbmloader'
+MODULE '*palfade'
 
 
 ENUM ERR_NONE, ERR_ECODE, ERR_CREATEPORT
@@ -132,14 +133,16 @@ PROC main() HANDLE
             
             IF il.open(path)
                 NEW bmark.init(10)
+                fade_out_vport(ldr.vport, ldr.max_colors, 5)
                 bmark.start()
                 IF il.parse_header() = FALSE
                     PrintF('\s failed header parsing\n', path)
                 ELSE
-                    il.load_cmap(ldr.vport, ldr.max_colors)
+                    ->il.load_cmap(ldr.vport, ldr.max_colors)
                     bmark.mark() -> 0
                     il.load_body(ldr.rport, ldr.x, ldr.y)
                     bmark.mark() -> 1
+                    fade_in_vport(il.colormap, ldr.vport, ldr.max_colors, 5)
                     PrintF('\s loaded in \d ms\n', path, bmark.msecs(1))
                 ENDIF
                 ldr.img_loaded := curr_img
