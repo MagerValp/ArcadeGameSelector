@@ -6,8 +6,8 @@ import optparse
 try:
     from PIL import Image
 except ImportError:
-    print >>sys.stderr, "Pillow is required"
-    raise
+    print >>sys.stderr, "Pillow is required, install with sudo pip install pillow"
+    sys.exit(1)
 import array
 import math
 import struct
