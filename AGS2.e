@@ -22,7 +22,7 @@ PROC main() HANDLE
         -> Start AGS2Menu.
         IF SystemTagList(AGS_MENU_PATH, [NIL]) = -1 THEN Raise(ERR_MENU)
         -> Check if there's a RAM:AGS.run for us, otherwise exit.
-        IF FileLength(AGS_RUN_PATH) = -1 THEN RETURN
+        IF FileLength(AGS_RUN_PATH) = -1 THEN Raise(0)
         -> Execute RAM:AGS.run.
         IF SystemTagList(AGS_EXECUTE_COMMAND, [NIL]) = -1 THEN Raise(ERR_RUN)
         -> Delete RAM:AGS.run.

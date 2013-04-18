@@ -148,7 +148,7 @@ PROC read(filename:PTR TO CHAR) OF agsconf HANDLE
     
     IF (fh := Open(filename, OLDFILE)) = NIL
         IF IoErr() = 205
-            RETURN
+            Raise(0)
         ELSE
             PrintFault(IoErr(), filename)
             Throw(AGSCONF_ERROR, AGSCONF_ERR_READ)
@@ -216,6 +216,6 @@ EXCEPT DO
     IF fh THEN Close(fh)
     IF exception
         IF linenum THEN PrintF('\s error on line \d\n', filename, linenum)
+        ReThrow()
     ENDIF
-    ReThrow()
 ENDPROC
