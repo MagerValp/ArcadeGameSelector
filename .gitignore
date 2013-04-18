@@ -4,6 +4,8 @@
 AGS.tmproj
 *.info
 *.iff
+!*-Background.iff
+!*-Empty.iff
 !AGS2Background.iff
 !Empty.iff
 *.ags
