@@ -88,6 +88,7 @@ PROC main() HANDLE
     DEF bmark = NIL:PTR TO benchmark
     DEF il = NIL:PTR TO ilbmloader
     DEF path[PATH_LEN]:STRING
+    DEF old_path[PATH_LEN]:STRING
     DEF curr_img = 0
     
     -> Allocate the object that we share with the IRQ handler.
@@ -131,25 +132,30 @@ PROC main() HANDLE
                 curr_img := ldr.img_num
             Enable()
             
-            IF il.open(path)
-                NEW bmark.init(10)
-                fade_out_vport(ldr.vport, ldr.max_colors, 5)
-                bmark.start()
-                IF il.parse_header() = FALSE
-                    PrintF('\s failed header parsing\n', path)
-                ELSE
-                    ->il.load_cmap(ldr.vport, ldr.max_colors)
-                    bmark.mark() -> 0
-                    il.load_body(ldr.rport, ldr.x, ldr.y)
-                    bmark.mark() -> 1
-                    fade_in_vport(il.colormap, ldr.vport, ldr.max_colors, 5)
-                    PrintF('\s loaded in \d ms\n', path, bmark.msecs(1))
-                ENDIF
+            IF StrCmp(path, old_path)
                 ldr.img_loaded := curr_img
-                il.close()
-                END bmark
             ELSE
-                PrintF('\s not found\n', path)
+                IF il.open(path)
+                    NEW bmark.init(10)
+                    fade_out_vport(ldr.vport, ldr.max_colors, 5)
+                    bmark.start()
+                    IF il.parse_header() = FALSE
+                        PrintF('\s failed header parsing\n', path)
+                    ELSE
+                        ->il.load_cmap(ldr.vport, ldr.max_colors)
+                        bmark.mark() -> 0
+                        il.load_body(ldr.rport, ldr.x, ldr.y)
+                        bmark.mark() -> 1
+                        fade_in_vport(il.colormap, ldr.vport, ldr.max_colors, 5)
+                        PrintF('\s loaded in \d ms\n', path, bmark.msecs(1))
+                    ENDIF
+                    ldr.img_loaded := curr_img
+                    il.close()
+                    END bmark
+                    StrCopy(old_path, path)
+                ELSE
+                    PrintF('\s not found\n', path)
+                ENDIF
             ENDIF
         ELSE
             Delay(1)
