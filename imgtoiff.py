@@ -12,6 +12,10 @@ import array
 import math
 import struct
 import cStringIO as StringIO
+import tempfile
+import shutil
+import os.path
+import subprocess
 
 
 def packbits(data):
@@ -39,36 +43,36 @@ def packbits(data):
     
     if len(data) == 0:
         return data
-
+    
     if len(data) == 1:
         return b'\x00' + data
-
+    
     data = bytearray(data)
-
+    
     result = bytearray()
     buf = bytearray()
     pos = 0
     repeat_count = 0
     MAX_LENGTH = 127
-
+    
     # we can safely start with RAW as empty RAW sequences
     # are handled by finish_raw()
     state = 'RAW'
-
+    
     def finish_raw():
         if len(buf) == 0:
             return
         result.append(len(buf)-1)
         result.extend(buf)
         buf[:] = bytearray()
-
+    
     def finish_rle():
         result.append(256-(repeat_count - 1))
         result.append(data[pos])
-
+    
     while pos < len(data)-1:
         current_byte = data[pos]
-
+        
         if data[pos] == data[pos+1]:
             if state == 'RAW':
                 # end of RAW data
@@ -82,7 +86,7 @@ def packbits(data):
                     repeat_count = 0
                 # move to next byte
                 repeat_count += 1
-
+        
         else:
             if state == 'RLE':
                 repeat_count += 1
@@ -93,18 +97,18 @@ def packbits(data):
                 if len(buf) == MAX_LENGTH:
                     # restart the encoding
                     finish_raw()
-
+                
                 buf.append(current_byte)
-
+        
         pos += 1
-
+    
     if state == 'RAW':
         buf.append(data[pos])
         finish_raw()
     else:
         repeat_count += 1
         finish_rle()
-
+    
     return bytes(result)
 
 def unpackbits(data):
@@ -116,7 +120,7 @@ def unpackbits(data):
         if header_byte > 127:
             header_byte -= 256
         pos += 1
-
+        
         if 0 <= header_byte <= 127:
             result.extend(data[pos:pos+header_byte+1])
             pos += header_byte+1
@@ -125,8 +129,9 @@ def unpackbits(data):
         else:
             result.extend([data[pos]] * (1 - header_byte))
             pos += 1
-
+    
     return bytes(result)
+
 
 # Converted from lz78.c by Ray/tSCc.
 LZ78_BITS =             12
@@ -222,6 +227,7 @@ def lz78pack(data):
     output_code(outp, 0)
     
     return outp.getvalue()
+
 
 def iff_chunk(id, *args):
     chunk_len = 0
@@ -320,7 +326,39 @@ def create_acbm(width, height, pixels, palette, mode, pack):
     
     form = iff_chunk("FORM", "ACBM", bmhd, cmap, camg, abit)
     return form
+
+
+# Spatial Color Quantization by Derrick Coetzee.
+def scolorq(image, max_colors, mode, dither):
+    height = image.size[1]
+    width = image.size[0]
     
+    tempdir = tempfile.mkdtemp()
+    try:
+        if image.format != "RGB":
+            image = image.convert("RGB")
+        
+        rgb_path = os.path.join(tempdir, "original.rgb")
+        with open(rgb_path, "wb") as f:
+            f.write(image.tostring())
+        
+        quant_path = os.path.join(tempdir, "quantized.rgb")
+        
+        scq_path = os.path.join(os.path.dirname(__file__), "spatial_color_quant")
+        subprocess.check_call((scq_path,
+                               rgb_path,
+                               "%d" % width,
+                               "%d" % height,
+                               "%d" % max_colors,
+                               quant_path,
+                               "0.7" if dither else "0.0000001",
+                               "3"))
+        
+        with open(quant_path) as f:
+            qimage = Image.fromstring("RGB", image.size, f.read())
+    finally:
+        shutil.rmtree(tempdir)
+    return qimage.convert("P", dither=Image.NONE, palette=Image.ADAPTIVE, colors=max_colors)
 
 AGA = 1
 OCS = 2
@@ -329,14 +367,15 @@ def main(argv):
     p = optparse.OptionParser()
     p.set_usage("""Usage: %prog [options] infile outfile.iff""")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose output.")
-    p.add_option("-o", "--ocs", action="store_true", help="OCS (4 bits per channel).")
-    p.add_option("-a", "--aga", action="store_true", help="AGA (8 bits per channel).")
-    p.add_option("-s", "--scale", nargs=2, type="int", action="store", help="Scale to width.")
-    p.add_option("-c", "--colors", type="int", action="store", help="Max number of colors.")
-    p.add_option("-d", "--dither", action="store_true", help="Dither when resampling.")
-    p.add_option("-m", "--mode", type="int", action="store", help="Amiga display mode ID.")
-    p.add_option("-p", "--pack", type="int", action="store", default=None, help="Select compression algorithm.")
-    p.add_option("-f", "--format", action="store", default="ILBM", help="ILBM or ACBM.")
+    p.add_option("-o", "--ocs",     action="store_true", help="OCS (4 bits per channel).")
+    p.add_option("-a", "--aga",     action="store_true", help="AGA (8 bits per channel).")
+    p.add_option("-s", "--scale",   action="store", nargs=2, type="int", help="Scale to width.")
+    p.add_option("-c", "--colors",  action="store", type="int", help="Max number of colors.")
+    p.add_option("-d", "--dither",  action="store_true", help="Dither when resampling.")
+    p.add_option("-m", "--mode",    action="store", type="int", help="Amiga display mode ID.")
+    p.add_option("-p", "--pack",    action="store", type="int", default=None, help="Select compression algorithm.")
+    p.add_option("-f", "--format",  action="store", default="ILBM", help="ILBM or ACBM.")
+    p.add_option("-q", "--quant",   action="store", default="adaptive", help="'adaptive' (fast) or 'spatial' (best).")
     options, argv = p.parse_args(argv)
     if len(argv) != 3:
         print >>sys.stderr, p.get_usage()
@@ -366,9 +405,9 @@ def main(argv):
         max_colors = options.colors
     
     if options.dither:
-        dither = Image.FLOYDSTEINBERG
+        dither_method = Image.FLOYDSTEINBERG
     else:
-        dither = Image.NONE
+        dither_method = Image.NONE
     
     if options.pack is None:
         if options.format.upper() == "ILBM":
@@ -380,7 +419,7 @@ def main(argv):
     
     # Image conversion.
     
-    im = Image.open(infile)
+    im = Image.open(infile)    
     #print im.format, im.size, im.mode
     if new_size is None:
         new_size = im.size
@@ -390,6 +429,8 @@ def main(argv):
         # Resize if needed.
         if new_size != im.size:
             rgb = rgb.resize(new_size, Image.ANTIALIAS)
+        # Simulate 12bpp for OCS, this reduces the input load for the
+        # quantizer.
         if mode == OCS:
             pixels = rgb.load()
             for y in xrange(rgb.size[1]):
@@ -400,15 +441,21 @@ def main(argv):
                     b = (b & 0xf0) | (b >> 4)
                     pixels[x, y] = (r, g, b)
         # Convert back to palette mode.
-        new_image = rgb.convert("P",
-                                dither=dither,
-                                palette=Image.ADAPTIVE,
-                                colors=max_colors)
+        if options.quant == "spatial":
+            new_image = scolorq(rgb, max_colors, mode, options.dither)
+        else:
+            new_image = rgb.convert("P",
+                                    dither=dither_method,
+                                    palette=Image.ADAPTIVE,
+                                    colors=max_colors)
     elif len(im.getcolors()) > max_colors:
-        new_image = im.convert("P",
-                               dither=dither,
-                               palette=Image.ADAPTIVE,
-                               colors=max_colors)
+        if options.quant == "spatial":
+            new_image = scolorq(rgb, max_colors, mode, options.dither)
+        else:
+            new_image = im.convert("P",
+                                   dither=dither_method,
+                                   palette=Image.ADAPTIVE,
+                                   colors=max_colors)
     else:
         new_image = im.copy()
     
