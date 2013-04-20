@@ -142,6 +142,12 @@ PROC main() HANDLE
                     IF il.parse_header() = FALSE
                         PrintF('\s failed header parsing\n', path)
                     ELSE
+                        SetAPen(ldr.rport, 0)
+                        RectFill(ldr.rport,
+                                 ldr.x,
+                                 ldr.y,
+                                 ldr.x + il.width - 1,
+                                 ldr.y + il.height - 1)
                         ->il.load_cmap(ldr.vport, ldr.max_colors)
                         bmark.mark() -> 0
                         il.load_body(ldr.rport, ldr.x, ldr.y)
