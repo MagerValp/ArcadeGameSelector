@@ -5,6 +5,7 @@ OPT PREPROCESS
 
 
 MODULE 'dos/dos'
+MODULE 'exec/memory'
 MODULE 'intuition/intuition'
 MODULE 'intuition/screens'
 MODULE 'graphics/modeid'
@@ -340,6 +341,7 @@ PROC main() HANDLE
     DEF il = NIL:PTR TO ilbmloader
     DEF s = NIL:PTR TO screen
     DEF w = NIL:PTR TO window
+    DEF pointer = NIL:PTR TO INT
     DEF s_width = 640
     DEF s_height = 256
     DEF s_depth = 4
@@ -402,6 +404,9 @@ PROC main() HANDLE
             WA_ACTIVATE, TRUE,
             0])) = NIL THEN Raise(ERR_WINDOW)
     
+    pointer := NewM(4, MEMF_CHIP OR MEMF_CLEAR)
+    SetPointer(w, pointer, 1, 1, 0, 0)
+    
     ta.name := conf.font
     ta.ysize := conf.font_size
     ta.style := 0
@@ -443,6 +448,7 @@ EXCEPT DO
     END loader
     END il
     IF font THEN CloseFont(font)
+    IF pointer THEN Dispose(pointer)
     IF w THEN CloseWindow(w)
     IF s THEN CloseScreen(s)
     SetJoyPortAttrsA(1, [SJA_REINITIALIZE, 0, 0])
