@@ -42,6 +42,7 @@ OBJECT ags
     height:INT
     width:INT
     offset:INT
+    char_width:INT
 ENDOBJECT
 
 PROC init(conf, nav, loader, rport) OF ags
@@ -52,6 +53,7 @@ PROC init(conf, nav, loader, rport) OF ags
     ->self.height := 0
     self.width := 26
     ->self.offset := 0
+    self.char_width := TextLength(rport, 'A', 1)
 ENDPROC
 
 PROC end() OF ags
@@ -229,7 +231,7 @@ PROC redraw(start=0, end=-1) OF ags
             RectFill(self.rport,
                      self.conf.menu_x,
                      self.conf.menu_y + (self.conf.font_size * self.nav.num_items),
-                     self.conf.menu_x + (self.width * 8) - 1, -> FIXME: calculate
+                     self.conf.menu_x + (self.width * self.char_width) - 1,
                      self.conf.menu_y + (self.conf.font_size * self.conf.menu_height) - 1)
         ENDIF
         end := self.conf.menu_height - 1
