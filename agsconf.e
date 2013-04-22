@@ -28,7 +28,7 @@ EXPORT OBJECT agsconf
     bgcolor:INT -> = 254
     lock_colors:INT -> = 4
 
-    font:LONG -> PTR TO STRING -> topaz.font
+    font_name:LONG -> PTR TO STRING -> topaz.font
     font_size:INT -> = 8
     
     menu_x:INT -> = 24
@@ -48,7 +48,7 @@ ENDOBJECT
 -> Initialize with default configuration.
 PROC init() OF agsconf
     self.background := String(128)
-    self.font := String(32)
+    self.font_name := String(32)
     self.empty_screenshot := String(128)
     
     StrCopy(self.background, 'AGS:AGS2Background.iff')
@@ -58,7 +58,7 @@ PROC init() OF agsconf
     self.bgcolor := 254
     self.lock_colors := 4
     
-    StrCopy(self.font, 'topaz.font')
+    StrCopy(self.font_name, 'topaz.font')
     self.font_size := 8
     
     self.menu_x := 24
@@ -80,7 +80,7 @@ PROC end() OF agsconf
     
     ptr := self.background
     END ptr
-    ptr := self.font
+    ptr := self.font_name
     END ptr
     ptr := self.empty_screenshot
     END ptr
@@ -92,7 +92,7 @@ PROC set_value(key:PTR TO CHAR, value:PTR TO CHAR) OF agsconf
     IF StrCmp(key, 'background')
         StrCopy(self.background, value)
     ELSEIF StrCmp(key, 'font')
-        StrCopy(self.font, value)
+        StrCopy(self.font_name, value)
     ELSEIF StrCmp(key, 'empty_screenshot')
         StrCopy(self.empty_screenshot, value)
     ELSE

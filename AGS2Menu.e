@@ -409,7 +409,7 @@ PROC main() HANDLE
     pointer := NewM(4, MEMF_CHIP OR MEMF_CLEAR)
     SetPointer(w, pointer, 1, 1, 0, 0)
     
-    ta.name := conf.font
+    ta.name := conf.font_name
     ta.ysize := conf.font_size
     ta.style := 0
     ta.flags := 0
