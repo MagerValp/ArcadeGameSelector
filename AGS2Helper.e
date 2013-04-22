@@ -13,7 +13,7 @@ MODULE 'exec/nodes'
 MODULE 'exec/lists'
 MODULE 'graphics/rastport'
 MODULE 'graphics/view'
-MODULE '*benchmark'
+->MODULE '*benchmark'
 MODULE '*agsil'
 MODULE '*ilbmloader'
 MODULE '*palfade'
@@ -85,7 +85,7 @@ PROC main() HANDLE
     DEF wrapped_code
     DEF port = NIL:PTR TO mp
     
-    DEF bmark = NIL:PTR TO benchmark
+    ->DEF bmark = NIL:PTR TO benchmark
     DEF il = NIL:PTR TO ilbmloader
     DEF path[PATH_LEN]:STRING
     DEF old_path[PATH_LEN]:STRING
@@ -136,9 +136,9 @@ PROC main() HANDLE
                 ldr.img_loaded := curr_img
             ELSE
                 IF il.open(path)
-                    NEW bmark.init(10)
+                    ->NEW bmark.init(10)
                     fade_out_vport(ldr.vport, ldr.max_colors, 5)
-                    bmark.start()
+                    ->bmark.start()
                     IF il.parse_header() = FALSE
                         PrintF('\s failed header parsing\n', path)
                     ELSE
@@ -149,15 +149,15 @@ PROC main() HANDLE
                                  ldr.x + il.width - 1,
                                  ldr.y + il.height - 1)
                         ->il.load_cmap(ldr.vport, ldr.max_colors)
-                        bmark.mark() -> 0
+                        ->bmark.mark() -> 0
                         il.load_body(ldr.rport, ldr.x, ldr.y)
-                        bmark.mark() -> 1
+                        ->bmark.mark() -> 1
                         fade_in_vport(il.colormap, ldr.vport, ldr.max_colors, 5)
-                        PrintF('\s loaded in \d ms\n', path, bmark.msecs(1))
+                        ->PrintF('\s loaded in \d ms\n', path, bmark.msecs(1))
                     ENDIF
                     ldr.img_loaded := curr_img
                     il.close()
-                    END bmark
+                    ->END bmark
                     StrCopy(old_path, path)
                 ELSE
                     PrintF('\s not found\n', path)
