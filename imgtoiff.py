@@ -345,14 +345,18 @@ def scolorq(image, max_colors, mode, dither):
         quant_path = os.path.join(tempdir, "quantized.rgb")
         
         scq_path = os.path.join(os.path.dirname(__file__), "spatial_color_quant")
-        subprocess.check_call((scq_path,
-                               rgb_path,
-                               "%d" % width,
-                               "%d" % height,
-                               "%d" % max_colors,
-                               quant_path,
-                               "0.7" if dither else "0.0000001",
-                               "3"))
+        try:
+            subprocess.check_call((scq_path,
+                                   rgb_path,
+                                   "%d" % width,
+                                   "%d" % height,
+                                   "%d" % max_colors,
+                                   quant_path,
+                                   "0.7" if dither else "0.0000001",
+                                   "3"))
+        except OSError:
+            sys.exit("Requires spatial_color_quant:\n\n"
+                     "  http://www.cs.berkeley.edu/~dcoetzee/downloads/scolorq/")
         
         with open(quant_path) as f:
             qimage = Image.fromstring("RGB", image.size, f.read())
