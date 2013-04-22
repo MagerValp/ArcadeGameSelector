@@ -38,6 +38,7 @@ OBJECT ags
     nav:PTR TO agsnav
     loader:PTR TO agsil_master
     rport:PTR TO rastport
+    font:PTR TO textfont
     current_item:INT
     height:INT
     width:INT
@@ -45,11 +46,12 @@ OBJECT ags
     char_width:INT
 ENDOBJECT
 
-PROC init(conf, nav, loader, rport) OF ags
+PROC init(conf, nav, loader, rport, font) OF ags
     self.conf := conf
     self.nav := nav
     self.loader := loader
     self.rport := rport
+    self.font := font
     ->self.height := 0
     self.width := 26
     ->self.offset := 0
@@ -438,7 +440,7 @@ PROC main() HANDLE
     
     NEW nav.init()
     
-    NEW ags.init(conf, nav, loader, w.rport)
+    NEW ags.init(conf, nav, loader, w.rport, font)
     ags.select()
     fade_out_vport(s.viewport, Shl(1, s_depth), 10)
     
