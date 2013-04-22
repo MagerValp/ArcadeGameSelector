@@ -21,9 +21,10 @@ Installation
 
 Copy `AGS2`, `AGS2Helper`, `AGS2.conf`, `AGS2Background.iff`, and `Empty.iff` into `AGS:`. Copy `Startup-Sequence` to `S:` for AGS to start automatically. For each game that you wish to run create a script with the commands necessary to start it and give it a `.run` extension. You can also add a screenshot with a `.iff` extension and information with a `.txt` extension.
 
-Place AGS:AGS2 in the Startup-Sequence after SetPatch and Assign AGS:
+Place AGS:AGS2 in the Startup-Sequence after SetPatch, Assign AGS: and whatever customizations you need:
 
     C:SetPatch >NIL:
+    C:NoClick NOCLICK
     Assign AGS: SYS:AGS
     
     AGS:AGS2
@@ -34,7 +35,7 @@ Place AGS:AGS2 in the Startup-Sequence after SetPatch and Assign AGS:
 Subdirectories
 --------------
 
-Subdirectories that end with `.ags` are included at the top of the game list, and they can also have a `.iff` screenshot. Subdirectories are currently limited to being two levels deep.
+Subdirectories that end with `.ags` are included at the top of the game list, and they can also have a `.iff` screenshot and a `.txt` info file. Subdirectories are currently limited to being two levels deep.
 
 
 Screenshots and Colors
