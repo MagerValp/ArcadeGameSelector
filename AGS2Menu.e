@@ -256,7 +256,7 @@ PROC create_menu_bitmap() OF ags HANDLE
     
     -> Allocate a single bitplane bitmap for the menu text.
     self.menu_bm_width := (self.width + 2) * self.char_width
-    self.menu_bm_height := self.nav.num_items * self.conf.font_size
+    self.menu_bm_height := self.nav.num_items * self.font.ysize
     
     NEW bm
     InitBitMap(bm, 1, self.menu_bm_width, self.menu_bm_height)
@@ -274,7 +274,7 @@ PROC create_menu_bitmap() OF ags HANDLE
     ->SetABPenDrMd(self.menu_rastport, 1, 0, RP_JAM2)
     FOR line := 0 TO self.nav.num_items - 1
         item := self.nav.items[line]
-        y := line * self.conf.font_size
+        y := line * self.font.ysize
         Move(self.menu_rastport, self.menu_rastport.font.xsize, y + self.menu_rastport.font.baseline)
         Text(self.menu_rastport, item.name, item.length)
     ENDFOR
@@ -295,9 +295,9 @@ PROC redraw(start=0, end=-1) OF ags
             SetAPen(self.rport, self.conf.text_background)
             RectFill(self.rport,
                      self.conf.menu_x,
-                     self.conf.menu_y + (self.conf.font_size * self.nav.num_items),
+                     self.conf.menu_y + (self.font.ysize * self.nav.num_items),
                      self.conf.menu_x + self.menu_bm_width - 1,
-                     self.conf.menu_y + (self.conf.font_size * self.conf.menu_height) - 1)
+                     self.conf.menu_y + (self.font.ysize * self.conf.menu_height) - 1)
         ENDIF
         end := Min(self.conf.menu_height, self.nav.num_items) - 1
     ENDIF
@@ -361,8 +361,8 @@ PROC load_text() OF ags HANDLE
     RectFill(self.rport,
              self.conf.text_x,
              self.conf.text_y,
-             self.conf.text_x + (self.conf.text_width * 8) - 1, -> FIXME: calculate
-             self.conf.text_y + (self.conf.font_size * self.conf.text_height) - 1)
+             self.conf.text_x + (self.conf.text_width * self.font.xsize) - 1,
+             self.conf.text_y + (self.conf.text_height * self.font.ysize) - 1)
     
     self.get_item_path(path, '.txt')
     IF FileLength(path) = -1 THEN Raise(0)
@@ -385,13 +385,14 @@ PROC load_text() OF ags HANDLE
                 line[len] := 0
             ENDIF
         ENDIF
+        IF len > self.conf.text_width THEN DEC len
         -> Fix estring length.
         SetStr(line, len)
         
         IF len > 0
             y := self.conf.text_y +
-                 self.rport.font.baseline +
-                 (self.conf.font_size * linenum)
+                 self.font.baseline +
+                 (self.font.ysize * linenum)
             Move(self.rport, self.conf.text_x, y)
             Text(self.rport, line, len)
         ENDIF
