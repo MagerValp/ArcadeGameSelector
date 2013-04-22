@@ -40,9 +40,7 @@ Subdirectories that end with `.ags` are included at the top of the game list, an
 Screenshots and Colors
 ----------------------
 
-The menu's screenmode, depth, palette, and colors are completely configurable. By default the screenmode and depth are copied from the background image, and text is rendered with the last color of the palette (255) and the second to last color (254) is used for the text's background. All of these can be configured in `AGS2.conf`. When screenshots are loaded the palette is also loaded, so to keep the screenshots from changing the colors of the user interface you can use the `lock_colors` options to lock the last colors in the palette.
-
-For AGA machines I would recommend designing an 8-bit background image that uses the 16 colors, leaving 240 colors to be loaded from each screenshot. For OCS machines I would recommend setting a locked palette and remapping all screenshots to use the same colors.
+The menu's screenmode, depth, palette, and colors are configurable. By default the screenmode and depth are copied from the background image, and text is rendered with the last color of the palette (255) and the second to last color (254) is used for the text's background. All of these can be configured in `AGS2.conf`. When screenshots are loaded the palette is also loaded, so to keep the screenshots from changing the colors of the user interface you can use the `lock_colors` options to lock the last colors in the palette.
 
 
 Configuration
@@ -54,8 +52,6 @@ Configuration
     background = AGS:AGS2Background.iff
     mode = $29000
     depth = 4
-    textcolor = 255
-    bgcolor = 254
     lock_colors = 4
 
 *By default depth and mode are automatically copied from the background image, only set them if you wish to override.*
@@ -79,3 +75,5 @@ Configuration
     text_y = 144
     text_width = 40
     text_height = 13
+    text_color = 255
+    text_background = 254

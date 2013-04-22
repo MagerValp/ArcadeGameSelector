@@ -9,6 +9,7 @@ MODULE 'exec/memory'
 MODULE 'intuition/intuition'
 MODULE 'intuition/screens'
 MODULE 'graphics/modeid'
+MODULE 'graphics/gfx'
 MODULE 'graphics/rastport'
 MODULE 'graphics/text'
 MODULE 'lowlevel'
@@ -39,6 +40,10 @@ OBJECT ags
     loader:PTR TO agsil_master
     rport:PTR TO rastport
     font:PTR TO textfont
+    menu_rastport:PTR TO rastport
+    menu_bitmap:PTR TO bitmap
+    menu_bm_width:INT
+    menu_bm_height:INT
     current_item:INT
     height:INT
     width:INT
@@ -59,6 +64,7 @@ PROC init(conf, nav, loader, rport, font) OF ags
 ENDPROC
 
 PROC end() OF ags
+    self.discard_menu_bitmap()
 ENDPROC
 
 CONST COPY_BUF_SIZE = 128
@@ -216,49 +222,107 @@ PROC reload() OF ags
     self.current_item := 0
     self.height := Min(self.nav.num_items, self.conf.menu_height)
     self.offset := 0
+    self.discard_menu_bitmap()
+    self.create_menu_bitmap()
     self.redraw()
 ENDPROC
 
-PROC redraw(start=0, end=-1) OF ags
+PROC discard_menu_bitmap() OF ags
+    DEF bm:PTR TO bitmap
+    DEF rp:PTR TO rastport
+    
+    IF self.menu_bitmap <> NIL
+        IF self.menu_bitmap.planes[0] <> NIL
+            FreeRaster(self.menu_bitmap.planes[0], self.menu_bm_width, self.menu_bm_height)
+        ENDIF
+        bm := self.menu_bitmap
+        END bm
+        self.menu_bitmap := NIL
+    ENDIF
+    IF self.menu_rastport <> NIL
+        rp := self.menu_rastport
+        END rp
+        self.menu_rastport := NIL
+    ENDIF
+ENDPROC
+    
+PROC create_menu_bitmap() OF ags HANDLE
+    DEF bm = NIL:PTR TO bitmap
+    DEF rp = NIL:PTR TO rastport
     DEF line
     DEF item:PTR TO agsnav_item
     DEF y
-    DEF empty->:PTR TO CHAR
-    DEF len
+    DEF i
     
-    empty := '                          ' -> Used for padding.
+    -> Allocate a single bitplane bitmap for the menu text.
+    self.menu_bm_width := (self.width + 2) * self.char_width
+    self.menu_bm_height := self.nav.num_items * self.conf.font_size
+    
+    NEW bm
+    InitBitMap(bm, 1, self.menu_bm_width, self.menu_bm_height)
+    bm.planes[0] := AllocRaster(self.menu_bm_width, self.menu_bm_height)
+    IF bm.planes[0] = NIL THEN Raise("MEM")
+    self.menu_bitmap := bm
+    
+    NEW rp
+    InitRastPort(rp)
+    rp.bitmap := bm
+    self.menu_rastport := rp
+    SetRast(self.menu_rastport, 0)
+    SetFont(self.menu_rastport, self.font)
+    
+    ->SetABPenDrMd(self.menu_rastport, 1, 0, RP_JAM2)
+    FOR line := 0 TO self.nav.num_items - 1
+        item := self.nav.items[line]
+        y := line * self.conf.font_size
+        Move(self.menu_rastport, self.menu_rastport.font.xsize, y + self.menu_rastport.font.baseline)
+        Text(self.menu_rastport, item.name, item.length)
+    ENDFOR
+EXCEPT
+    IF bm.planes[i] <> NIL THEN FreeRaster(bm.planes[i], self.menu_bm_width, self.menu_bm_height)
+    END bm
+    END rp
+    ReThrow()
+ENDPROC
+
+PROC redraw(start=0, end=-1) OF ags
+    DEF src_y
+    DEF dest_y
+    DEF height
+    
     IF end = -1
         IF self.nav.num_items < self.conf.menu_height
-            SetAPen(self.rport, self.conf.bgcolor)
+            SetAPen(self.rport, self.conf.text_background)
             RectFill(self.rport,
                      self.conf.menu_x,
                      self.conf.menu_y + (self.conf.font_size * self.nav.num_items),
-                     self.conf.menu_x + (self.width * self.char_width) - 1,
+                     self.conf.menu_x + self.menu_bm_width - 1,
                      self.conf.menu_y + (self.conf.font_size * self.conf.menu_height) - 1)
         ENDIF
-        end := self.conf.menu_height - 1
+        end := Min(self.conf.menu_height, self.nav.num_items) - 1
     ENDIF
-    SetAPen(self.rport, self.conf.textcolor)
-    SetBPen(self.rport, self.conf.bgcolor)
-    FOR line := start TO end
-        IF line < self.nav.num_items
-            IF self.current_item = line
-                SetDrMd(self.rport, RP_INVERSVID OR RP_JAM2)
-            ELSE
-                SetDrMd(self.rport, RP_JAM2)
-            ENDIF
-            y := self.conf.menu_y +
-                 self.rport.font.baseline +
-                 (self.conf.font_size * line)
-            Move(self.rport, self.conf.menu_x, y)
-            item := self.nav.items[self.offset + line]
-            Text(self.rport, item.name, item.length)
-            len := EstrLen(item.name)
-            IF len < self.width
-                Text(self.rport, empty + len, self.width - len)
-            ENDIF
-        ENDIF
-    ENDFOR
+    
+    src_y := (self.offset + start) * self.font.ysize
+    dest_y := start * self.font.ysize
+    height := (Min(end - start, self.nav.num_items) + 1) * self.font.ysize
+    BltBitMapRastPort(self.menu_bitmap,
+                      0,
+                      src_y,
+                      self.rport,
+                      self.conf.menu_x,
+                      self.conf.menu_y + dest_y,
+                      self.menu_bm_width,
+                      height,
+                      $0c0)
+    BltBitMapRastPort(self.menu_bitmap,
+                      0,
+                      0,
+                      self.rport,
+                      self.conf.menu_x,
+                      self.conf.menu_y + (self.current_item * self.font.ysize),
+                      self.menu_bm_width,
+                      self.font.ysize,
+                      $050)
 ENDPROC
 
 PROC get_item_path(path:LONG, suffix:PTR TO CHAR) OF ags
@@ -293,7 +357,7 @@ PROC load_text() OF ags HANDLE
     
     IF self.conf.text_height = 0 THEN Raise(0)
     
-    SetAPen(self.rport, self.conf.bgcolor)
+    SetAPen(self.rport, self.conf.text_background)
     RectFill(self.rport,
              self.conf.text_x,
              self.conf.text_y,
@@ -308,8 +372,8 @@ PROC load_text() OF ags HANDLE
     -> Work around Fgets() bug in V36/V37.
     IF KickVersion(39) THEN adjust_read := 0 ELSE adjust_read := 1
     
-    SetAPen(self.rport, self.conf.textcolor)
-    SetBPen(self.rport, self.conf.bgcolor)
+    SetAPen(self.rport, self.conf.text_color)
+    SetBPen(self.rport, self.conf.text_background)
     SetDrMd(self.rport, RP_JAM2)
     IF (fh := Open(path, OLDFILE)) = NIL THEN Raise(0)
     WHILE (linenum < self.conf.text_height) AND Fgets(fh, line, bufsize - adjust_read)
