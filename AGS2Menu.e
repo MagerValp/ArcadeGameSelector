@@ -401,7 +401,7 @@ PROC load_text() OF ags HANDLE
     ENDWHILE
     
 EXCEPT DO
-    IF bufsize THEN END line[bufsize]
+    IF line THEN DisposeLink(line)
 ENDPROC
 
 

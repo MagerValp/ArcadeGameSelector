@@ -76,14 +76,9 @@ PROC init() OF agsconf
 ENDPROC
 
 PROC end() OF agsconf
-    DEF ptr
-    
-    ptr := self.background
-    END ptr
-    ptr := self.font_name
-    END ptr
-    ptr := self.empty_screenshot
-    END ptr
+    DisposeLink(self.background)
+    DisposeLink(self.font_name)
+    DisposeLink(self.empty_screenshot)
 ENDPROC
 
 PROC set_value(key:PTR TO CHAR, value:PTR TO CHAR) OF agsconf

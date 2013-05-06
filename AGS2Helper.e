@@ -178,6 +178,7 @@ EXCEPT DO
         Dispose(port)
     ENDIF
     IF softint THEN Dispose(softint)
+    IF ldr.img_path THEN DisposeLink(ldr.img_path)
     IF ldr THEN Dispose(ldr)
     SELECT exception
         CASE "MEM"

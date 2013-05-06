@@ -40,20 +40,14 @@ PROC init() OF agsnav
 ENDPROC
 
 PROC set_path(path:PTR TO CHAR) OF agsnav
-    DEF p
-    
-    p := self.path
-    END p
+    IF self.path THEN DisposeLink(self.path)
     self.path := String(StrLen(path) + 1)
     StrCopy(self.path, path)
 ENDPROC
 
 PROC end() OF agsnav
-    DEF p
-    
     self.clear(0)
-    p := self.path
-    END p
+    IF self.path THEN DisposeLink(self.path)
 ENDPROC
 
 -> Clear the current navigator and allocate enough space for num_reserve items.
@@ -65,8 +59,7 @@ PROC clear(num_reserve:LONG) OF agsnav
     IF self.items
         FOR i := 0 TO self.num_items - 1
             item := self.items[i]
-            name := item.name
-            END name
+            DisposeLink(item.name)
             END item
         ENDFOR
         END self.items[self.reserved]
@@ -205,9 +198,9 @@ PROC read_dir() OF agsnav HANDLE
         ENDIF
         self.add_item(name, type)
         next := Next(current)
-        END current
         current := next
     ENDWHILE
+    DisposeLink(current)
     
 EXCEPT DO
     IF eac THEN FreeDosObject(DOS_EXALLCONTROL, eac)
