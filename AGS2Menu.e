@@ -12,6 +12,8 @@ MODULE 'graphics/modeid'
 MODULE 'graphics/gfx'
 MODULE 'graphics/rastport'
 MODULE 'graphics/text'
+MODULE 'graphics/view'
+MODULE 'graphics/videocontrol'
 MODULE 'lowlevel'
 MODULE 'libraries/lowlevel'
 MODULE '*ilbmloader'
@@ -483,6 +485,7 @@ PROC main() HANDLE
     SetFont(w.rport, font)
     
     fade_out_vport(s.viewport, Shl(1, s_depth), 1) -> Clear palette to black.
+    VideoControl(s.viewport.colormap, [VTAG_BORDERBLANK_SET, 0, 0])
     il.load_body(w.rport, 0, 0)
     ScreenToFront(s)
     fade_in_vport(il.colormap, s.viewport, Shl(1, s_depth), 10)
