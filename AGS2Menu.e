@@ -102,7 +102,6 @@ PROC select() OF ags
     DEF rawkey
     DEF quit = FALSE
     DEF portstate
-    ->DEF lastrawkey
     -> Counters to delay repeat and screenshot loading.
     DEF up_ctr = 0
     DEF down_ctr = 0
@@ -115,23 +114,23 @@ PROC select() OF ags
     
     self.reload()
     
+    IF (portstate := ReadJoyPort(1)) = JP_TYPE_NOTAVAIL THEN Raise(ERR_JOYSTICK)
+    
     REPEAT
         WaitTOF()
         
-        IF (portstate := ReadJoyPort(1)) = JP_TYPE_NOTAVAIL THEN Raise(ERR_JOYSTICK)
+        portstate := ReadJoyPort(1)
         
         key := GetKey()
         rawkey := key AND $ffff
-        /*
-        IF lastrawkey <> rawkey
-            PrintF('rawkey = \d\n', rawkey)
-            lastrawkey := rawkey
-        ENDIF
-        */
-        IF ((rawkey = RAWKEY_Q) AND (key AND LLKB_RAMIGA)) OR
-           (rawkey = RAWKEY_ESC) OR
-           (portstate AND JPF_BUTTON_BLUE)
+        
+        IF ((rawkey = RAWKEY_Q) AND (key AND LLKB_RAMIGA)) OR (rawkey = RAWKEY_ESC)
             quit := TRUE
+        ENDIF
+        IF (portstate AND JP_TYPE_MASK) = JP_TYPE_GAMECTLR
+            IF portstate AND JPF_BUTTON_BLUE
+                quit := TRUE
+            ENDIF
         ENDIF
 
         IF (portstate AND JPF_JOY_UP) OR (rawkey = RAWKEY_UP)
