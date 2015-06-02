@@ -10,6 +10,8 @@ MODULE 'dos/dos'
 
 EXPORT CONST AGSCONF_ERROR = "AGSC"
 EXPORT ENUM AGSCONF_ERR_READ = 1, AGSCONF_ERR_VALUE, AGSCONF_ERR_UNKNOWN
+EXPORT ENUM AGSCONF_ACTION_NONE = 0, AGSCONF_ACTION_QUIT = 1
+
 
 EXPORT PROC agsconf_strerror(num:LONG) IS ListItem([
         'Error reading config file',
@@ -43,6 +45,8 @@ EXPORT OBJECT agsconf
     text_height:INT
     text_color:INT -> = 255
     text_background:INT -> = 254
+    
+    blue_button_action:LONG -> AGSCONF_ACTION_QUIT
 ENDOBJECT
 
 -> Initialize with default configuration.
@@ -73,6 +77,8 @@ PROC init() OF agsconf
     self.text_y := 144
     self.text_width := 40
     self.text_height := (248 - self.text_y) / self.font_size
+    
+    self.blue_button_action := AGSCONF_ACTION_QUIT
 ENDPROC
 
 PROC end() OF agsconf
@@ -90,6 +96,14 @@ PROC set_value(key:PTR TO CHAR, value:PTR TO CHAR) OF agsconf
         StrCopy(self.font_name, value)
     ELSEIF StrCmp(key, 'empty_screenshot')
         StrCopy(self.empty_screenshot, value)
+    ELSEIF StrCmp(key, 'blue_button_action')
+        IF StrCmp(value, 'quit')
+            self.blue_button_action := AGSCONF_ACTION_QUIT
+        ELSEIF StrCmp(value, 'none')
+            self.blue_button_action := AGSCONF_ACTION_NONE
+        ELSE
+            Throw(AGSCONF_ERROR, AGSCONF_ERR_UNKNOWN)
+        ENDIF
     ELSE
         num, read := Val(value)
         IF read = 0 THEN Throw(AGSCONF_ERROR, AGSCONF_ERR_VALUE)

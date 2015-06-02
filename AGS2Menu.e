@@ -131,7 +131,9 @@ PROC select() OF ags
         ENDIF
         IF (portstate AND JP_TYPE_MASK) = JP_TYPE_GAMECTLR
             IF portstate AND JPF_BUTTON_BLUE
-                quit := TRUE
+                IF self.conf.blue_button_action = AGSCONF_ACTION_QUIT
+                    quit := TRUE
+                ENDIF
             ENDIF
         ENDIF
 
