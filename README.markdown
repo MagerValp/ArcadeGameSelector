@@ -108,3 +108,7 @@ Configuration
     text_height = 13
     text_color = 255
     text_background = 254
+
+### *Miscellaneous*
+    # Valid options are "quit" or "none".
+    blue_button_action = quit
