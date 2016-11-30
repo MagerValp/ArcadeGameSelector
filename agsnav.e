@@ -82,7 +82,7 @@ ENDPROC OstrCmp(item1.name, item2.name)
 -> Insert the item into a sorted list, with directories before files.
 PROC add_item(name:PTR TO CHAR, type:LONG) OF agsnav
     DEF item:PTR TO agsnav_item
-    DEF pos
+    DEF pos, found
     DEF i
     
     NEW item
@@ -94,8 +94,15 @@ PROC add_item(name:PTR TO CHAR, type:LONG) OF agsnav
         self.items[0] := item
     ELSE
         pos := 0
-        WHILE (compare_items(self.items[pos], item) > 0) AND (pos < self.num_items)
-            INC pos
+        found := FALSE
+        WHILE found = FALSE
+            IF pos >= self.num_items
+                found := TRUE
+            ELSEIF compare_items(self.items[pos], item) <= 0
+                found := TRUE
+            ELSE
+                INC pos
+            ENDIF
         ENDWHILE
         IF pos < self.num_items
             FOR i := self.num_items TO pos STEP -1
