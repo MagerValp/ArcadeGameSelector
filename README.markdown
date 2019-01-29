@@ -4,6 +4,18 @@ ArcadeGameSelector 2
 AGS2 is a joystick controlled menu program for the Amiga.
 
 
+Download
+--------
+
+[AGS2-20161130.lha](https://www.dropbox.com/s/sa6e8deyw86ceas/AGS2-20161130.lha)
+
+
+Discussion and Help
+-------------------
+
+[EAB Forum Thread](http://eab.abime.net/showthread.php?t=68818)
+
+
 What's New
 ----------
 
