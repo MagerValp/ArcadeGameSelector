@@ -97,6 +97,8 @@ CONST RAWKEY_Q      = 16
 CONST RAWKEY_ESC    = 69
 CONST RAWKEY_UP     = 76
 CONST RAWKEY_DOWN   = 77
+CONST RAWKEY_RIGHT  = 78
+CONST RAWKEY_LEFT   = 79
 CONST RAWKEY_RETURN = 68
 
 PROC select() OF ags
@@ -107,6 +109,8 @@ PROC select() OF ags
     -> Counters to delay repeat and screenshot loading.
     DEF up_ctr = 0
     DEF down_ctr = 0
+    DEF right_ctr = 0
+    DEF left_ctr = 0
     DEF screenshot_ctr = 0
     
     DEF item:PTR TO agsnav_item
@@ -170,7 +174,43 @@ PROC select() OF ags
         ELSE
             down_ctr := 0
         ENDIF
-        
+
+        -> Page Down
+        IF (portstate AND JPF_JOY_RIGHT) OR (rawkey = RAWKEY_RIGHT)
+            IF (right_ctr = 0) OR (right_ctr > REPEAT_DELAY)
+                IF (self.offset < (self.nav.num_items - self.height)) OR (self.current_item < (self.height - 1))
+                    IF self.offset < (self.nav.num_items - self.height)
+                        self.offset := Min(self.nav.num_items - self.height, self.offset + self.height - 1)
+                    ELSEIF self.current_item < (self.height - 1)
+                        self.current_item := self.height - 1
+                    ENDIF
+                ENDIF
+                self.redraw()
+                screenshot_ctr := 0
+            ENDIF
+            INC right_ctr
+        ELSE
+            right_ctr := 0
+        ENDIF
+
+        -> Page Up
+        IF (portstate AND JPF_JOY_LEFT) OR (rawkey = RAWKEY_LEFT)
+            IF (left_ctr = 0) OR (left_ctr > REPEAT_DELAY)
+                IF (self.offset > 0) OR (self.current_item > 0)
+                    IF self.offset > 0
+                        self.offset := Max(0, self.offset - self.height + 1)
+                    ELSEIF self.current_item > 0
+                        self.current_item := 0
+                    ENDIF
+                    self.redraw()
+                    screenshot_ctr := 0
+                ENDIF
+            ENDIF
+            INC left_ctr
+        ELSE
+            left_ctr := 0
+        ENDIF
+
         IF (portstate AND JPF_BUTTON_RED) OR (rawkey = RAWKEY_RETURN)
             index := self.current_item + self.offset
             item := self.nav.items[index]
