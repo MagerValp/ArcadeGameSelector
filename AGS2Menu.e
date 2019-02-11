@@ -184,9 +184,13 @@ PROC select() OF ags
                     ELSEIF self.current_item < (self.height - 1)
                         self.current_item := self.height - 1
                     ENDIF
+                    self.redraw()
+                    screenshot_ctr := 0
+                ELSEIF (self.nav.num_items < self.height) AND (self.current_item < self.height)
+                    self.current_item := self.nav.num_items
+                    self.redraw()
+                    screenshot_ctr := 0
                 ENDIF
-                self.redraw()
-                screenshot_ctr := 0
             ENDIF
             INC right_ctr
         ELSE
@@ -202,6 +206,10 @@ PROC select() OF ags
                     ELSEIF self.current_item > 0
                         self.current_item := 0
                     ENDIF
+                    self.redraw()
+                    screenshot_ctr := 0
+                ELSEIF (self.nav.num_items < self.height) AND (self.current_item > 0)
+                    self.current_item := 0
                     self.redraw()
                     screenshot_ctr := 0
                 ENDIF
