@@ -17,7 +17,7 @@ all: AGS2 AGS2Menu AGS2Helper
 
 AGS2: AGS2.e agsdefs.m
 
-AGS2Menu: AGS2Menu.e agsil.m agsnav.m agsconf.m rgbcolor.m ilbmloader.m palfade.m agsdefs.m
+AGS2Menu: AGS2Menu.e agsil.m agsnav.m agsconf.m rgbcolor.m ilbmloader.m palfade.m agsdefs.m agsmenupos.m
 
 AGS2Helper: AGS2Helper.e agsil.m rgbcolor.m ilbmloader.m palfade.m benchmark.m
 
@@ -30,6 +30,7 @@ clean:
 	Delete agsdefs.m QUIET >NIL:
 	Delete agsil.m QUIET >NIL:
 	Delete agsnav.m QUIET >NIL:
+	Delete agsmenupos.m QUIET >NIL:
 	Delete agsconf.m QUIET >NIL:
 	Delete ilbmloader.m QUIET >NIL:
 	Delete benchmark.m QUIET >NIL:

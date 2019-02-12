@@ -21,6 +21,7 @@ MODULE '*agsil'
 MODULE '*agsnav'
 MODULE '*agsconf'
 MODULE '*agsdefs'
+MODULE '*agsmenupos'
 MODULE '*palfade'
 
 
@@ -59,9 +60,7 @@ PROC init(conf, nav, loader, rport, font) OF ags
     self.loader := loader
     self.rport := rport
     self.font := font
-    ->self.height := 0
     self.width := 26
-    ->self.offset := 0
     self.char_width := TextLength(rport, 'A', 1)
 ENDPROC
 
@@ -101,7 +100,7 @@ CONST RAWKEY_RIGHT  = 78
 CONST RAWKEY_LEFT   = 79
 CONST RAWKEY_RETURN = 68
 
-PROC select() OF ags
+PROC select(init_offset, init_pos) OF ags
     DEF key
     DEF rawkey
     DEF quit = FALSE
@@ -117,9 +116,10 @@ PROC select() OF ags
     DEF index
     DEF path[100]:STRING
     DEF pos
-    
-    self.reload()
-    
+    DEF menu_pos = NIL:PTR TO agsmenupos
+
+    self.reload(init_offset, init_pos)
+
     IF (portstate := ReadJoyPort(1)) = JP_TYPE_NOTAVAIL THEN Raise(ERR_JOYSTICK)
     
     REPEAT
@@ -246,6 +246,12 @@ PROC select() OF ags
                     screenshot_ctr := 0
                 ENDIF
             ELSE
+                -> Serialize navigation state and copy run script
+                NEW menu_pos.init()
+                menu_pos.set(self.nav.path, self.nav.depth, self.offset, self.current_item)
+                menu_pos.write()
+                END menu_pos
+
                 StrCopy(path, self.nav.path)
                 StrAdd(path, item.name)
                 StrAdd(path, '.run')
@@ -268,11 +274,11 @@ PROC select() OF ags
     
 ENDPROC
 
-PROC reload() OF ags
+PROC reload(offset = 0, pos = 0) OF ags
     IF self.nav.read_dir() = 0 THEN Raise(ERR_EMPTY)
-    self.current_item := 0
+    self.current_item := pos
     self.height := Min(self.nav.num_items, self.conf.menu_height)
-    self.offset := 0
+    self.offset := offset
     self.discard_menu_bitmap()
     self.create_menu_bitmap()
     self.redraw()
@@ -473,7 +479,8 @@ PROC main() HANDLE
     DEF xy
     DEF nav = NIL:PTR TO agsnav             -> Menu directory navigator.
     DEF ags = NIL:PTR TO ags                -> Application controller.
-    
+    DEF menu_pos = NIL:PTR TO agsmenupos
+
     IF KickVersion(37) = FALSE THEN Raise(ERR_KICKSTART)
     
     IF (lowlevelbase := OpenLibrary('lowlevel.library', 0)) = NIL THEN Raise("LOWL")
@@ -554,13 +561,18 @@ PROC main() HANDLE
     */
     xy := Shl(conf.screenshot_x, 16) OR conf.screenshot_y
     reply := loader.send_cmd(AGSIL_SETXY, xy)
-    
+
+    NEW menu_pos.init()
+    menu_pos.read()
+
     NEW nav.init()
-    
+    nav.set_path(menu_pos.path)
+    nav.depth := menu_pos.depth
+
     NEW ags.init(conf, nav, loader, w.rport, font)
-    ags.select()
+    ags.select(menu_pos.offset, menu_pos.pos)
     fade_out_vport(s.viewport, Shl(1, s_depth), 10)
-    
+
     loader.stop()
 
 EXCEPT DO
@@ -574,6 +586,7 @@ EXCEPT DO
     IF s THEN CloseScreen(s)
     SetJoyPortAttrsA(1, [SJA_REINITIALIZE, 0, 0])
     END conf
+    END menu_pos
     IF lowlevelbase THEN CloseLibrary(lowlevelbase)
     SELECT exception
         CASE "MEM"
