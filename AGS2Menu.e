@@ -248,8 +248,7 @@ PROC select(init_offset, init_pos) OF ags
             ELSE
                 -> Serialize navigation state and copy run script
                 NEW menu_pos.init()
-                menu_pos.set(self.nav.path, self.nav.depth, self.offset, self.current_item)
-                menu_pos.write()
+                menu_pos.write(self.nav.path, self.nav.depth, self.offset, self.current_item)
                 END menu_pos
 
                 StrCopy(path, self.nav.path)
