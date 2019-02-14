@@ -115,7 +115,8 @@ PROC select(init_offset, init_pos) OF ags
     DEF item:PTR TO agsnav_item
     DEF index
     DEF path[100]:STRING
-    DEF pos
+    DEF prev_item[100]:STRING
+    DEF pos, len
     DEF menu_pos = NIL:PTR TO agsmenupos
 
     self.reload(init_offset, init_pos)
@@ -226,15 +227,19 @@ PROC select(init_offset, init_pos) OF ags
                 IF self.nav.depth AND (index = 0) -> Go to parent dir.
                     StrCopy(path, self.nav.path)
                     pos := EstrLen(path) - 1
+                    len := 0
                     REPEAT
                         DEC pos
+                        INC len
                     UNTIL (path[pos] = "/") OR (path[pos] = ":")
                     INC pos
+                    RightStr(prev_item, path, len)
+                    SetStr(prev_item, len - 5)
                     path[pos] := 0
                     SetStr(path, pos)
                     self.nav.set_path(path)
                     self.nav.depth := self.nav.depth - 1
-                    self.reload()
+                    self.reload(0, 0, prev_item)
                     screenshot_ctr := 0
                 ELSEIF self.nav.depth < 2
                     StrCopy(path, self.nav.path)
@@ -273,11 +278,25 @@ PROC select(init_offset, init_pos) OF ags
     
 ENDPROC
 
-PROC reload(offset = 0, pos = 0) OF ags
+PROC reload(offset = 0, pos = 0, select_item = NIL) OF ags
+    DEF line
+    DEF item:PTR TO agsnav_item
     IF self.nav.read_dir() = 0 THEN Raise(ERR_EMPTY)
-    self.current_item := pos
     self.height := Min(self.nav.num_items, self.conf.menu_height)
+    IF select_item
+        FOR line := 0 TO self.nav.num_items - 1
+            item := self.nav.items[line]
+            IF StrCmp(select_item, item.name) THEN JUMP break
+        ENDFOR
+        break:
+        WHILE line >= self.height
+            DEC line
+            INC offset
+        ENDWHILE
+        pos := line
+    ENDIF
     self.offset := offset
+    self.current_item := pos
     self.discard_menu_bitmap()
     self.create_menu_bitmap()
     self.redraw()
