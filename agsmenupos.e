@@ -24,7 +24,7 @@ PROC end() OF agsmenupos
     DisposeLink(self.path)
 ENDPROC
 
-PROC read() OF agsmenupos HANDLE
+PROC read() OF agsmenupos
     DEF fh = NIL
     DEF line[BUFSIZE]:STRING
     DEF linenum = 0
@@ -65,12 +65,9 @@ PROC read() OF agsmenupos HANDLE
     ELSE
         StrCopy(self.path, 'AGS:')
     ENDIF
-EXCEPT DO
-    IF fh THEN Close(fh)
-    DeleteFile(AGS_MENUPOS_PATH)
 ENDPROC
 
-PROC write(path:PTR TO CHAR, depth, offset, pos) OF agsmenupos HANDLE
+PROC write(path:PTR TO CHAR, depth, offset, pos) OF agsmenupos
     DEF fh = NIL
 
     StrCopy(self.path, path)
@@ -82,7 +79,4 @@ PROC write(path:PTR TO CHAR, depth, offset, pos) OF agsmenupos HANDLE
         VfPrintf(fh, '\s\n\d\n\d\n\d', [self.path, self.depth, self.offset, self.pos]:LONG)
         Close(fh)
     ENDIF
-EXCEPT DO
-    IF fh THEN Close(fh)
-    DeleteFile(AGS_MENUPOS_PATH)
 ENDPROC
