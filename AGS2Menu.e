@@ -98,6 +98,8 @@ CONST RAWKEY_Q      = 16
 CONST RAWKEY_ESC    = 69
 CONST RAWKEY_UP     = 76
 CONST RAWKEY_DOWN   = 77
+CONST RAWKEY_RIGHT  = 78
+CONST RAWKEY_LEFT   = 79
 CONST RAWKEY_RETURN = 68
 
 PROC select(init_offset, init_pos) OF ags
@@ -108,12 +110,15 @@ PROC select(init_offset, init_pos) OF ags
     -> Counters to delay repeat and screenshot loading.
     DEF up_ctr = 0
     DEF down_ctr = 0
+    DEF right_ctr = 0
+    DEF left_ctr = 0
     DEF screenshot_ctr = 0
     
     DEF item:PTR TO agsnav_item
     DEF index
     DEF path[100]:STRING
-    DEF pos
+    DEF prev_item[100]:STRING
+    DEF pos, len
     DEF menu_pos = NIL:PTR TO agsmenupos
     
     self.reload(init_offset, init_pos)
@@ -173,6 +178,50 @@ PROC select(init_offset, init_pos) OF ags
             down_ctr := 0
         ENDIF
         
+        -> Page Down
+        IF (portstate AND JPF_JOY_RIGHT) OR (rawkey = RAWKEY_RIGHT)
+            IF (right_ctr = 0) OR (right_ctr > REPEAT_DELAY)
+                IF (self.offset < (self.nav.num_items - self.height)) OR (self.current_item < (self.height - 1))
+                    IF self.offset < (self.nav.num_items - self.height)
+                        self.offset := Min(self.nav.num_items - self.height, self.offset + self.height - 1)
+                    ELSEIF self.current_item < (self.height - 1)
+                        self.current_item := self.height - 1
+                    ENDIF
+                    self.redraw()
+                    screenshot_ctr := 0
+                ELSEIF (self.nav.num_items < self.height) AND (self.current_item < self.height)
+                    self.current_item := self.nav.num_items
+                    self.redraw()
+                    screenshot_ctr := 0
+                ENDIF
+            ENDIF
+            INC right_ctr
+        ELSE
+            right_ctr := 0
+        ENDIF
+
+        -> Page Up
+        IF (portstate AND JPF_JOY_LEFT) OR (rawkey = RAWKEY_LEFT)
+            IF (left_ctr = 0) OR (left_ctr > REPEAT_DELAY)
+                IF (self.offset > 0) OR (self.current_item > 0)
+                    IF self.offset > 0
+                        self.offset := Max(0, self.offset - self.height + 1)
+                    ELSEIF self.current_item > 0
+                        self.current_item := 0
+                    ENDIF
+                    self.redraw()
+                    screenshot_ctr := 0
+                ELSEIF (self.nav.num_items < self.height) AND (self.current_item > 0)
+                    self.current_item := 0
+                    self.redraw()
+                    screenshot_ctr := 0
+                ENDIF
+            ENDIF
+            INC left_ctr
+        ELSE
+            left_ctr := 0
+        ENDIF
+
         IF (portstate AND JPF_BUTTON_RED) OR (rawkey = RAWKEY_RETURN)
             index := self.current_item + self.offset
             item := self.nav.items[index]
@@ -180,15 +229,19 @@ PROC select(init_offset, init_pos) OF ags
                 IF self.nav.depth AND (index = 0) -> Go to parent dir.
                     StrCopy(path, self.nav.path)
                     pos := EstrLen(path) - 1
+                    len := 0
                     REPEAT
                         DEC pos
+                        INC len
                     UNTIL (path[pos] = "/") OR (path[pos] = ":")
                     INC pos
+                    RightStr(prev_item, path, len)
+                    SetStr(prev_item, len - 5)
                     path[pos] := 0
                     SetStr(path, pos)
                     self.nav.set_path(path)
                     self.nav.depth := self.nav.depth - 1
-                    self.reload()
+                    self.reload(0, 0, prev_item)
                     screenshot_ctr := 0
                 ELSEIF self.nav.depth < 2
                     StrCopy(path, self.nav.path)
@@ -227,9 +280,27 @@ PROC select(init_offset, init_pos) OF ags
     
 ENDPROC
 
-PROC reload(offset = 0, pos = 0) OF ags
+PROC reload(offset = 0, pos = 0, select_item = NIL) OF ags
+    DEF line
+    DEF item:PTR TO agsnav_item
+
     IF self.nav.read_dir() = 0 THEN Raise(ERR_EMPTY)
     self.height := Min(self.nav.num_items, self.conf.menu_height)
+
+    IF select_item
+        FOR line := 0 TO self.nav.num_items - 1
+            item := self.nav.items[line]
+            IF StrCmp(select_item, item.name) THEN JUMP break
+        ENDFOR
+        line := 0
+        break:
+        WHILE line >= self.height
+            DEC line
+            INC offset
+        ENDWHILE
+        pos := line
+    ENDIF
+    
     self.offset := offset
     self.current_item := pos
     self.discard_menu_bitmap()
