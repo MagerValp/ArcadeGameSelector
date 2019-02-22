@@ -21,6 +21,7 @@ MODULE '*agsil'
 MODULE '*agsnav'
 MODULE '*agsconf'
 MODULE '*agsdefs'
+MODULE '*agsmenupos'
 MODULE '*palfade'
 
 
@@ -97,9 +98,11 @@ CONST RAWKEY_Q      = 16
 CONST RAWKEY_ESC    = 69
 CONST RAWKEY_UP     = 76
 CONST RAWKEY_DOWN   = 77
+CONST RAWKEY_RIGHT  = 78
+CONST RAWKEY_LEFT   = 79
 CONST RAWKEY_RETURN = 68
 
-PROC select() OF ags
+PROC select(init_offset, init_pos) OF ags
     DEF key
     DEF rawkey
     DEF quit = FALSE
@@ -107,14 +110,18 @@ PROC select() OF ags
     -> Counters to delay repeat and screenshot loading.
     DEF up_ctr = 0
     DEF down_ctr = 0
+    DEF right_ctr = 0
+    DEF left_ctr = 0
     DEF screenshot_ctr = 0
     
     DEF item:PTR TO agsnav_item
     DEF index
     DEF path[100]:STRING
-    DEF pos
+    DEF prev_item[100]:STRING
+    DEF pos, len
+    DEF menu_pos = NIL:PTR TO agsmenupos
     
-    self.reload()
+    self.reload(init_offset, init_pos)
     
     IF (portstate := ReadJoyPort(1)) = JP_TYPE_NOTAVAIL THEN Raise(ERR_JOYSTICK)
     
@@ -171,6 +178,50 @@ PROC select() OF ags
             down_ctr := 0
         ENDIF
         
+        -> Page Down
+        IF (portstate AND JPF_JOY_RIGHT) OR (rawkey = RAWKEY_RIGHT)
+            IF (right_ctr = 0) OR (right_ctr > REPEAT_DELAY)
+                IF (self.offset < (self.nav.num_items - self.height)) OR (self.current_item < (self.height - 1))
+                    IF self.offset < (self.nav.num_items - self.height)
+                        self.offset := Min(self.nav.num_items - self.height, self.offset + self.height - 1)
+                    ELSEIF self.current_item < (self.height - 1)
+                        self.current_item := self.height - 1
+                    ENDIF
+                    self.redraw()
+                    screenshot_ctr := 0
+                ELSEIF (self.nav.num_items < self.height) AND (self.current_item < self.height)
+                    self.current_item := self.nav.num_items
+                    self.redraw()
+                    screenshot_ctr := 0
+                ENDIF
+            ENDIF
+            INC right_ctr
+        ELSE
+            right_ctr := 0
+        ENDIF
+
+        -> Page Up
+        IF (portstate AND JPF_JOY_LEFT) OR (rawkey = RAWKEY_LEFT)
+            IF (left_ctr = 0) OR (left_ctr > REPEAT_DELAY)
+                IF (self.offset > 0) OR (self.current_item > 0)
+                    IF self.offset > 0
+                        self.offset := Max(0, self.offset - self.height + 1)
+                    ELSEIF self.current_item > 0
+                        self.current_item := 0
+                    ENDIF
+                    self.redraw()
+                    screenshot_ctr := 0
+                ELSEIF (self.nav.num_items < self.height) AND (self.current_item > 0)
+                    self.current_item := 0
+                    self.redraw()
+                    screenshot_ctr := 0
+                ENDIF
+            ENDIF
+            INC left_ctr
+        ELSE
+            left_ctr := 0
+        ENDIF
+
         IF (portstate AND JPF_BUTTON_RED) OR (rawkey = RAWKEY_RETURN)
             index := self.current_item + self.offset
             item := self.nav.items[index]
@@ -178,15 +229,19 @@ PROC select() OF ags
                 IF self.nav.depth AND (index = 0) -> Go to parent dir.
                     StrCopy(path, self.nav.path)
                     pos := EstrLen(path) - 1
+                    len := 0
                     REPEAT
                         DEC pos
+                        INC len
                     UNTIL (path[pos] = "/") OR (path[pos] = ":")
                     INC pos
+                    RightStr(prev_item, path, len)
+                    SetStr(prev_item, len - 5)
                     path[pos] := 0
                     SetStr(path, pos)
                     self.nav.set_path(path)
                     self.nav.depth := self.nav.depth - 1
-                    self.reload()
+                    self.reload(0, 0, prev_item)
                     screenshot_ctr := 0
                 ELSEIF self.nav.depth < 2
                     StrCopy(path, self.nav.path)
@@ -198,6 +253,11 @@ PROC select() OF ags
                     screenshot_ctr := 0
                 ENDIF
             ELSE
+                -> Serialize navigation state and copy run script
+                NEW menu_pos.init()
+                menu_pos.write(self.nav.path, self.nav.depth, self.offset, self.current_item)
+                END menu_pos
+
                 StrCopy(path, self.nav.path)
                 StrAdd(path, item.name)
                 StrAdd(path, '.run')
@@ -220,11 +280,29 @@ PROC select() OF ags
     
 ENDPROC
 
-PROC reload() OF ags
+PROC reload(offset = 0, pos = 0, select_item = NIL) OF ags
+    DEF line
+    DEF item:PTR TO agsnav_item
+
     IF self.nav.read_dir() = 0 THEN Raise(ERR_EMPTY)
-    self.current_item := 0
     self.height := Min(self.nav.num_items, self.conf.menu_height)
-    self.offset := 0
+
+    IF select_item
+        FOR line := 0 TO self.nav.num_items - 1
+            item := self.nav.items[line]
+            IF StrCmp(select_item, item.name) THEN JUMP break
+        ENDFOR
+        line := 0
+        break:
+        WHILE line >= self.height
+            DEC line
+            INC offset
+        ENDWHILE
+        pos := line
+    ENDIF
+    
+    self.offset := offset
+    self.current_item := pos
     self.discard_menu_bitmap()
     self.create_menu_bitmap()
     self.redraw()
@@ -425,6 +503,7 @@ PROC main() HANDLE
     DEF xy
     DEF nav = NIL:PTR TO agsnav             -> Menu directory navigator.
     DEF ags = NIL:PTR TO ags                -> Application controller.
+    DEF menu_pos = NIL:PTR TO agsmenupos
     
     IF KickVersion(37) = FALSE THEN Raise(ERR_KICKSTART)
     
@@ -507,10 +586,15 @@ PROC main() HANDLE
     xy := Shl(conf.screenshot_x, 16) OR conf.screenshot_y
     reply := loader.send_cmd(AGSIL_SETXY, xy)
     
+    NEW menu_pos.init()
+    menu_pos.read()
+    
     NEW nav.init()
+    nav.set_path(menu_pos.path)
+    nav.depth := menu_pos.depth
     
     NEW ags.init(conf, nav, loader, w.rport, font)
-    ags.select()
+    ags.select(menu_pos.offset, menu_pos.pos)
     fade_out_vport(s.viewport, Shl(1, s_depth), 10)
     
     loader.stop()
@@ -526,6 +610,7 @@ EXCEPT DO
     IF s THEN CloseScreen(s)
     SetJoyPortAttrsA(1, [SJA_REINITIALIZE, 0, 0])
     END conf
+    END menu_pos
     IF lowlevelbase THEN CloseLibrary(lowlevelbase)
     SELECT exception
         CASE "MEM"
