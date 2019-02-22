@@ -35,7 +35,7 @@ EXCEPT DO
             PrintF('Couldn''t execute ' + AGS_MENU_PATH + '\n')
         CASE ERR_RUN
             PrintF('Couldn''t execute ' + AGS_RUN_PATH + '\n')
-        CASE ERR_RUN
+        CASE ERR_DELETE
             PrintF('Couldn''t delete ' + AGS_RUN_PATH + '\n')
         DEFAULT
             IF exception
