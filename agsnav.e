@@ -54,7 +54,7 @@ ENDPROC
 PROC clear(num_reserve:LONG) OF agsnav
     DEF i
     DEF item:PTR TO agsnav_item
-    DEF name:PTR TO CHAR
+    ->DEF name:PTR TO CHAR
     
     IF self.items
         FOR i := 0 TO self.num_items - 1
