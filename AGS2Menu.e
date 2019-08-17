@@ -119,6 +119,7 @@ PROC select(init_offset, init_pos) OF ags
     DEF path[100]:STRING
     DEF prev_item[100]:STRING
     DEF pos, len
+    DEF should_redraw = 0
     DEF menu_pos = NIL:PTR TO agsmenupos
     
     self.reload(init_offset, init_pos)
@@ -144,6 +145,7 @@ PROC select(init_offset, init_pos) OF ags
             ENDIF
         ENDIF
 
+        -> Up / Down
         IF (portstate AND JPF_JOY_UP) OR (rawkey = RAWKEY_UP)
             IF (up_ctr = 0) OR (up_ctr > REPEAT_DELAY)
                 IF self.current_item > 0
@@ -177,22 +179,25 @@ PROC select(init_offset, init_pos) OF ags
         ELSE
             down_ctr := 0
         ENDIF
-        
-        -> Page Down
+
+        -> Page Up / Down
         IF (portstate AND JPF_JOY_RIGHT) OR (rawkey = RAWKEY_RIGHT)
             IF (right_ctr = 0) OR (right_ctr > REPEAT_DELAY)
-                IF (self.offset < (self.nav.num_items - self.height)) OR (self.current_item < (self.height - 1))
-                    IF self.offset < (self.nav.num_items - self.height)
-                        self.offset := Min(self.nav.num_items - self.height, self.offset + self.height - 1)
-                    ELSEIF self.current_item < (self.height - 1)
-                        self.current_item := self.height - 1
+                IF (self.nav.num_items < self.height)
+                    IF (self.current_item < self.height)
+                        self.current_item := self.nav.num_items
+                        should_redraw := 1
                     ENDIF
-                    self.redraw()
-                    screenshot_ctr := 0
-                ELSEIF (self.nav.num_items < self.height) AND (self.current_item < self.height)
-                    self.current_item := self.nav.num_items
-                    self.redraw()
-                    screenshot_ctr := 0
+                ELSE
+                    IF (self.current_item < (self.height - 1))
+                        self.current_item := self.height - 1
+                        should_redraw := 1
+                    ELSE
+                        IF (self.offset < (self.nav.num_items - self.height))
+                            self.offset := Min(self.nav.num_items - self.height, self.offset + self.height - 1)
+                            should_redraw := 1
+                        ENDIF
+                    ENDIF
                 ENDIF
             ENDIF
             INC right_ctr
@@ -200,26 +205,34 @@ PROC select(init_offset, init_pos) OF ags
             right_ctr := 0
         ENDIF
 
-        -> Page Up
         IF (portstate AND JPF_JOY_LEFT) OR (rawkey = RAWKEY_LEFT)
             IF (left_ctr = 0) OR (left_ctr > REPEAT_DELAY)
-                IF (self.offset > 0) OR (self.current_item > 0)
-                    IF self.offset > 0
-                        self.offset := Max(0, self.offset - self.height + 1)
-                    ELSEIF self.current_item > 0
+                IF (self.nav.num_items < self.height)
+                    IF (self.current_item > 0)
                         self.current_item := 0
+                        should_redraw := 1
                     ENDIF
-                    self.redraw()
-                    screenshot_ctr := 0
-                ELSEIF (self.nav.num_items < self.height) AND (self.current_item > 0)
-                    self.current_item := 0
-                    self.redraw()
-                    screenshot_ctr := 0
+                ELSE
+                    IF (self.current_item > 0)
+                        self.current_item := 0
+                        should_redraw := 1
+                    ELSE
+                        IF (self.offset > 0)
+                            self.offset := Max(0, self.offset - self.height + 1)
+                            should_redraw := 1
+                        ENDIF
+                    ENDIF
                 ENDIF
             ENDIF
             INC left_ctr
         ELSE
             left_ctr := 0
+        ENDIF
+
+        IF (should_redraw <> 0)
+            self.redraw()
+            screenshot_ctr := 0
+            should_redraw := 0
         ENDIF
 
         IF (portstate AND JPF_BUTTON_RED) OR (rawkey = RAWKEY_RETURN)
