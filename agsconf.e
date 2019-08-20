@@ -30,6 +30,7 @@ EXPORT OBJECT agsconf
 
     font_name:LONG -> PTR TO STRING -> topaz.font
     font_size:INT -> = 8
+    font_leading:INT -> = 0
     
     menu_x:INT -> = 24
     menu_y:INT -> = 8
@@ -64,6 +65,7 @@ PROC init() OF agsconf
     
     StrCopy(self.font_name, 'topaz.font')
     self.font_size := 8
+    self.font_leading := 0
     
     self.menu_x := 24
     self.menu_y := 8
@@ -119,6 +121,8 @@ PROC set_value(key:PTR TO CHAR, value:PTR TO CHAR) OF agsconf
             self.lock_colors := num
         ELSEIF StrCmp(key, 'font_size')
             self.font_size := num
+        ELSEIF StrCmp(key, 'font_leading')
+            self.font_leading := num
         ELSEIF StrCmp(key, 'menu_x')
             self.menu_x := num
         ELSEIF StrCmp(key, 'menu_y')
