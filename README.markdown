@@ -45,7 +45,7 @@ However, games compatibility with the minimum setup will be low. The recommended
 * 68020 CPU
 * 4 MB of fast RAM
 * 1 MB of chip RAM
-* Registered version of [WHDLoad](http://www.whdload.de/)
+* [WHDLoad](http://www.whdload.de/)
 
 
 Installation
@@ -100,6 +100,7 @@ Configuration
 ### *Font selection*
     font = topaz.font
     font_size = 8
+    font_leading = 0
 
 ### *Menu layout*
     menu_x = 24

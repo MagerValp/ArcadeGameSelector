@@ -350,7 +350,7 @@ PROC create_menu_bitmap() OF ags HANDLE
     
     -> Allocate a single bitplane bitmap for the menu text.
     self.menu_bm_width := (self.width + 2) * self.char_width
-    self.menu_bm_height := self.nav.num_items * self.font.ysize
+    self.menu_bm_height := self.nav.num_items * (self.font.ysize + self.conf.font_leading)
     
     NEW bm
     InitBitMap(bm, 1, self.menu_bm_width, self.menu_bm_height)
@@ -368,7 +368,7 @@ PROC create_menu_bitmap() OF ags HANDLE
     ->SetABPenDrMd(self.menu_rastport, 1, 0, RP_JAM2)
     FOR line := 0 TO self.nav.num_items - 1
         item := self.nav.items[line]
-        y := line * self.font.ysize
+        y := line * (self.font.ysize + self.conf.font_leading)
         Move(self.menu_rastport, self.menu_rastport.font.xsize, y + self.menu_rastport.font.baseline)
         Text(self.menu_rastport, item.name, item.length)
     ENDFOR
@@ -389,16 +389,16 @@ PROC redraw(start=0, end=-1) OF ags
             SetAPen(self.rport, self.conf.text_background)
             RectFill(self.rport,
                      self.conf.menu_x,
-                     self.conf.menu_y + (self.font.ysize * self.nav.num_items),
+                     self.conf.menu_y + ((self.font.ysize + self.conf.font_leading) * self.nav.num_items),
                      self.conf.menu_x + self.menu_bm_width - 1,
-                     self.conf.menu_y + (self.font.ysize * self.conf.menu_height) - 1)
+                     self.conf.menu_y + ((self.font.ysize + self.conf.font_leading) * self.conf.menu_height) - 1)
         ENDIF
         end := Min(self.conf.menu_height, self.nav.num_items) - 1
     ENDIF
     
-    src_y := (self.offset + start) * self.font.ysize
-    dest_y := start * self.font.ysize
-    height := (Min(end - start, self.nav.num_items) + 1) * self.font.ysize
+    src_y := (self.offset + start) * (self.font.ysize + self.conf.font_leading)
+    dest_y := start * (self.font.ysize + self.conf.font_leading)
+    height := (Min(end - start, self.nav.num_items) + 1) * (self.font.ysize + self.conf.font_leading)
     BltBitMapRastPort(self.menu_bitmap,
                       0,
                       src_y,
@@ -413,7 +413,7 @@ PROC redraw(start=0, end=-1) OF ags
                       0,
                       self.rport,
                       self.conf.menu_x,
-                      self.conf.menu_y + (self.current_item * self.font.ysize),
+                      self.conf.menu_y + (self.current_item * (self.font.ysize + self.conf.font_leading)),
                       self.menu_bm_width,
                       self.font.ysize,
                       $050)
@@ -456,7 +456,7 @@ PROC load_text() OF ags HANDLE
              self.conf.text_x,
              self.conf.text_y,
              self.conf.text_x + (self.conf.text_width * self.font.xsize) - 1,
-             self.conf.text_y + (self.conf.text_height * self.font.ysize) - 1)
+             self.conf.text_y + (self.conf.text_height * (self.font.ysize + self.conf.font_leading)) - 1)
     
     self.get_item_path(path, '.txt')
     IF FileLength(path) = -1 THEN Raise(0)
@@ -486,7 +486,7 @@ PROC load_text() OF ags HANDLE
         IF len > 0
             y := self.conf.text_y +
                  self.font.baseline +
-                 (self.font.ysize * linenum)
+                 ((self.font.ysize + self.conf.font_leading) * linenum)
             Move(self.rport, self.conf.text_x, y)
             Text(self.rport, line, len)
         ENDIF
