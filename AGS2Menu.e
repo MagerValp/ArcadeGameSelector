@@ -496,6 +496,7 @@ PROC load_text() OF ags HANDLE
     
 EXCEPT DO
     IF line THEN DisposeLink(line)
+    IF fh THEN Close(fh)
 ENDPROC
 
 
