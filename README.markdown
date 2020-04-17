@@ -7,7 +7,7 @@ AGS2 is a joystick controlled menu program for the Amiga.
 Download
 --------
 
-[AGS2-20161130.lha](https://www.dropbox.com/s/sa6e8deyw86ceas/AGS2-20161130.lha)
+Downloads are available on the [releases](https://github.com/MagerValp/ArcadeGameSelector/releases) page.
 
 
 Discussion and Help
