@@ -17,7 +17,7 @@ ENUM ERR_MENU = 1,
 
 
 PROC main() HANDLE
-    
+
     LOOP
         -> Start AGS2Menu.
         IF SystemTagList(AGS_MENU_PATH, [NIL]) = -1 THEN Raise(ERR_MENU)
@@ -28,7 +28,7 @@ PROC main() HANDLE
         -> Delete RAM:AGS.run.
         IF DeleteFile(AGS_RUN_PATH) = FALSE THEN Raise(ERR_DELETE)
     ENDLOOP
-    
+
 EXCEPT DO
     SELECT exception
         CASE ERR_MENU

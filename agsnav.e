@@ -55,7 +55,7 @@ PROC clear(num_reserve:LONG) OF agsnav
     DEF i
     DEF item:PTR TO agsnav_item
     ->DEF name:PTR TO CHAR
-    
+
     IF self.items
         FOR i := 0 TO self.num_items - 1
             item := self.items[i]
@@ -65,7 +65,7 @@ PROC clear(num_reserve:LONG) OF agsnav
         END self.items[self.reserved]
     ENDIF
     self.num_items := 0
-    
+
     IF num_reserve
         IF self.depth THEN INC num_reserve
         NEW self.items[num_reserve]
@@ -84,7 +84,7 @@ PROC add_item(name:PTR TO CHAR, type:LONG) OF agsnav
     DEF item:PTR TO agsnav_item
     DEF pos, found
     DEF i
-    
+
     NEW item
     item.type := type
     item.name := String(StrLen(name) + 1)
@@ -117,7 +117,7 @@ ENDPROC
 PROC str_ends_with(str, suffix)
     DEF str_len
     DEF suffix_len
-    
+
     str_len := StrLen(str)
     suffix_len := StrLen(suffix)
     IF str_len < suffix_len THEN RETURN FALSE
@@ -133,16 +133,16 @@ PROC read_dir() OF agsnav HANDLE
     DEF buffer[BUFSIZE]:ARRAY OF CHAR
     DEF continue
     DEF error
-    
+
     DEF first = NIL -> :PTR TO STRING
     DEF current = NIL -> :PTR TO STRING
     DEF num_items = 0
     DEF next = NIL -> :PTR TO STRING
     DEF should_add
-    
+
     DEF name[30]:STRING
     DEF type
-    
+
     -> Read the current directory with ExAll().
     IF (lock := Lock(self.path, ACCESS_READ)) = FALSE
         Throw(AGSNAV_ERROR, AGSNAV_ERR_LOCK)
@@ -191,9 +191,9 @@ PROC read_dir() OF agsnav HANDLE
             ENDWHILE
         ENDIF
     UNTIL continue = FALSE
-    
+
     self.clear(num_items)
-    
+
     current := first
     WHILE current
         IF current[0] = "F"
@@ -208,7 +208,7 @@ PROC read_dir() OF agsnav HANDLE
         current := next
     ENDWHILE
     DisposeLink(current)
-    
+
 EXCEPT DO
     IF eac THEN FreeDosObject(DOS_EXALLCONTROL, eac)
     IF lock THEN UnLock(lock)

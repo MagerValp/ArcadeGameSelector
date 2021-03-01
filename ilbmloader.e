@@ -51,25 +51,25 @@ ENDOBJECT
 
 EXPORT OBJECT ilbmloader
     iff:PTR TO iffhandle
-    
+
     width:INT
     height:INT
     depth:CHAR
     masking:CHAR
     compression:CHAR
     _pad:CHAR
-    
+
     ncolors:LONG
     colormap:PTR TO rgbcolor
-    
+
     mode:LONG
-    
+
     is_open:INT
 ENDOBJECT
 
 EXPORT PROC init() OF ilbmloader
     DEF iff:PTR TO iffhandle
-    
+
     -> Read ILBM image using iffparse.library.
     IF (iffparsebase := OpenLibrary('iffparse.library', 0)) = NIL THEN Throw(ILBM_ERROR, ERR_IFF_LIBRARY)
     -> Allocate IFF handle and prepare it for DOS streams.
@@ -87,9 +87,9 @@ ENDPROC
 -> Open an IFF image for reading.
 EXPORT PROC open(name:PTR TO CHAR) OF ilbmloader
     DEF fh
-    
+
     IF self.is_open THEN Throw(ILBM_ERROR, ERR_IFF_ALREADYOPEN)
-        
+
     IF (fh := Open(name, OLDFILE)) = NIL
         -> THEN Throw(ILBM_ERROR, ERR_IFF_OPENFILE)
         RETURN FALSE
@@ -115,20 +115,20 @@ EXPORT PROC close() OF ilbmloader
 ENDPROC
 
 -> Parse image header.
-EXPORT PROC parse_header() OF ilbmloader    
+EXPORT PROC parse_header() OF ilbmloader
     DEF bmhd:PTR TO ilbm_bmhd
     DEF sp:PTR TO storedproperty
     DEF cmap:PTR TO CHAR
     DEF ret
     DEF i
-    
+
     PropChunk(self.iff, "ILBM", "BMHD")
     PropChunk(self.iff, "ILBM", "CMAP")
     PropChunk(self.iff, "ILBM", "CAMG")
     StopChunk(self.iff, "ILBM", "BODY")
     ret := ParseIFF(self.iff, IFFPARSE_SCAN)
     ->PrintF('ParseIFF returned \d\n', ret)
-    
+
     IF (sp := FindProp(self.iff, "ILBM", "BMHD")) = NIL THEN RETURN FALSE
     -> Throw(ILBM_ERROR, ERR_IFF_NOBMHD)
     bmhd := sp.data
@@ -146,7 +146,7 @@ EXPORT PROC parse_header() OF ilbmloader
     self.masking := bmhd.masking
     self.compression := bmhd.compression
     ->self.transparentcolor := bmhd.transparentcolor
-    
+
     IF (sp := FindProp(self.iff, "ILBM", "CMAP")) <> NIL
         self.ncolors := Min(sp.size / 3, Shl(1, self.depth))
         NEW self.colormap[self.ncolors]
@@ -157,7 +157,7 @@ EXPORT PROC parse_header() OF ilbmloader
             self.colormap[i].b := cmap[]++
         ENDFOR
     ENDIF
-    
+
     IF (sp := FindProp(self.iff, "ILBM", "CAMG")) <> NIL
         self.mode := Long(sp.data)
     ENDIF
@@ -170,7 +170,7 @@ EXPORT PROC load_cmap(vport:PTR TO viewport, max_colors:LONG) OF ilbmloader
     DEF i
     DEF offset
     DEF ncolors
-    
+
     ncolors := Min(self.ncolors, max_colors)
     IF KickVersion(39)
         NEW colors32[(ncolors * 3) + 2]
@@ -201,7 +201,7 @@ EXPORT PROC load_body(rport:PTR TO rastport, x:LONG, y:LONG) OF ilbmloader
     DEF ctxnode:PTR TO contextnode
     DEF cdata:PTR TO CHAR
     DEF i
-    
+
     -> Allocate a one raster line high bitmap to be used for blitting.
     IF KickVersion(39)
         bm := AllocBitMap(self.width, 1, self.depth, BMF_INTERLEAVED, rport)
@@ -238,7 +238,7 @@ EXPORT PROC load_body(rport:PTR TO rastport, x:LONG, y:LONG) OF ilbmloader
     self.ilbm_body_unpack(cdata, bm, rport, x, y)
     -> Free chunk data.
     END cdata[ctxnode.size]
-    
+
     IF KickVersion(39)
         FreeBitMap(bm)
     ELSE
@@ -262,7 +262,7 @@ PROC ilbm_body_unpack(cdata:PTR TO CHAR,
     DEF bytes_per_line
     DEF bytes_left
     DEF file_depth
-    
+
     -> If there is a bitmap mask there's an extra bitplane for each line.
     file_depth := self.depth + (IF self.masking = MASK_HASMASK THEN 1 ELSE 0)
     bytes_per_line := Shl(Shr(self.width + 15, 4), 1) * file_depth

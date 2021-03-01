@@ -113,7 +113,7 @@ PROC select(init_offset, init_pos) OF ags
     DEF right_ctr = 0
     DEF left_ctr = 0
     DEF screenshot_ctr = 0
-    
+
     DEF item:PTR TO agsnav_item
     DEF index
     DEF path[100]:STRING
@@ -121,19 +121,19 @@ PROC select(init_offset, init_pos) OF ags
     DEF pos, len
     DEF should_redraw = 0
     DEF menu_pos = NIL:PTR TO agsmenupos
-    
+
     self.reload(init_offset, init_pos)
-    
+
     IF (portstate := ReadJoyPort(1)) = JP_TYPE_NOTAVAIL THEN Raise(ERR_JOYSTICK)
-    
+
     REPEAT
         WaitTOF()
-        
+
         portstate := ReadJoyPort(1)
-        
+
         key := GetKey()
         rawkey := key AND $ffff
-        
+
         IF ((rawkey = RAWKEY_Q) AND (key AND LLKB_RAMIGA)) OR (rawkey = RAWKEY_ESC)
             quit := TRUE
         ENDIF
@@ -162,7 +162,7 @@ PROC select(init_offset, init_pos) OF ags
         ELSE
             up_ctr := 0
         ENDIF
-        
+
         IF (portstate AND JPF_JOY_DOWN) OR (rawkey = RAWKEY_DOWN)
             IF (down_ctr = 0) OR (down_ctr > REPEAT_DELAY)
                 IF self.current_item < (self.height - 1)
@@ -283,14 +283,14 @@ PROC select(init_offset, init_pos) OF ags
                 rawkey := GetKey() AND $ffff
             UNTIL ((portstate AND JPF_BUTTON_RED) = 0) AND (rawkey <> RAWKEY_RETURN)
         ENDIF
-        
+
         IF screenshot_ctr++ = (REPEAT_DELAY + 1)
             self.load_screenshot()
             self.load_text()
         ENDIF
-        
+
     UNTIL quit
-    
+
 ENDPROC
 
 PROC reload(offset = 0, pos = 0, select_item = NIL) OF ags
@@ -313,7 +313,7 @@ PROC reload(offset = 0, pos = 0, select_item = NIL) OF ags
         ENDWHILE
         pos := line
     ENDIF
-    
+
     self.offset := offset
     self.current_item := pos
     self.discard_menu_bitmap()
@@ -324,7 +324,7 @@ ENDPROC
 PROC discard_menu_bitmap() OF ags
     DEF bm:PTR TO bitmap
     DEF rp:PTR TO rastport
-    
+
     IF self.menu_bitmap <> NIL
         IF self.menu_bitmap.planes[0] <> NIL
             FreeRaster(self.menu_bitmap.planes[0], self.menu_bm_width, self.menu_bm_height)
@@ -339,7 +339,7 @@ PROC discard_menu_bitmap() OF ags
         self.menu_rastport := NIL
     ENDIF
 ENDPROC
-    
+
 PROC create_menu_bitmap() OF ags HANDLE
     DEF bm = NIL:PTR TO bitmap
     DEF rp = NIL:PTR TO rastport
@@ -347,24 +347,24 @@ PROC create_menu_bitmap() OF ags HANDLE
     DEF item:PTR TO agsnav_item
     DEF y
     DEF i
-    
+
     -> Allocate a single bitplane bitmap for the menu text.
     self.menu_bm_width := (self.width + 2) * self.char_width
     self.menu_bm_height := self.nav.num_items * (self.font.ysize + self.conf.font_leading)
-    
+
     NEW bm
     InitBitMap(bm, 1, self.menu_bm_width, self.menu_bm_height)
     bm.planes[0] := AllocRaster(self.menu_bm_width, self.menu_bm_height)
     IF bm.planes[0] = NIL THEN Raise("MEM")
     self.menu_bitmap := bm
-    
+
     NEW rp
     InitRastPort(rp)
     rp.bitmap := bm
     self.menu_rastport := rp
     SetRast(self.menu_rastport, 0)
     SetFont(self.menu_rastport, self.font)
-    
+
     ->SetABPenDrMd(self.menu_rastport, 1, 0, RP_JAM2)
     FOR line := 0 TO self.nav.num_items - 1
         item := self.nav.items[line]
@@ -383,7 +383,7 @@ PROC redraw(start=0, end=-1) OF ags
     DEF src_y
     DEF dest_y
     DEF height
-    
+
     IF end = -1
         IF self.nav.num_items < self.conf.menu_height
             SetAPen(self.rport, self.conf.text_background)
@@ -395,7 +395,7 @@ PROC redraw(start=0, end=-1) OF ags
         ENDIF
         end := Min(self.conf.menu_height, self.nav.num_items) - 1
     ENDIF
-    
+
     src_y := (self.offset + start) * (self.font.ysize + self.conf.font_leading)
     dest_y := start * (self.font.ysize + self.conf.font_leading)
     height := (Min(end - start, self.nav.num_items) + 1) * (self.font.ysize + self.conf.font_leading)
@@ -421,7 +421,7 @@ ENDPROC
 
 PROC get_item_path(path:LONG, suffix:PTR TO CHAR) OF ags
     DEF item:PTR TO agsnav_item
-    
+
     item := self.nav.items[self.current_item + self.offset]
     StrCopy(path, self.nav.path)
     StrAdd(path, item.name)
@@ -430,7 +430,7 @@ ENDPROC
 
 PROC load_screenshot() OF ags
     DEF path[100]:STRING
-    
+
     self.get_item_path(path, '.iff')
     IF FileLength(path) = -1
         self.loader.send_cmd(AGSIL_LOAD, self.conf.empty_screenshot)
@@ -448,24 +448,24 @@ PROC load_text() OF ags HANDLE
     DEF fh = NIL
     DEF linenum = 0
     DEF y
-    
+
     IF self.conf.text_height = 0 THEN Raise(0)
-    
+
     SetAPen(self.rport, self.conf.text_background)
     RectFill(self.rport,
              self.conf.text_x,
              self.conf.text_y,
              self.conf.text_x + (self.conf.text_width * self.font.xsize) - 1,
              self.conf.text_y + (self.conf.text_height * (self.font.ysize + self.conf.font_leading)) - 1)
-    
+
     self.get_item_path(path, '.txt')
     IF FileLength(path) = -1 THEN Raise(0)
-    
+
     bufsize := self.conf.text_width + 2
     line := String(bufsize)
     -> Work around Fgets() bug in V36/V37.
     IF KickVersion(39) THEN adjust_read := 0 ELSE adjust_read := 1
-    
+
     SetAPen(self.rport, self.conf.text_color)
     SetBPen(self.rport, self.conf.text_background)
     SetDrMd(self.rport, RP_JAM2)
@@ -482,7 +482,7 @@ PROC load_text() OF ags HANDLE
         IF len > self.conf.text_width THEN DEC len
         -> Fix estring length.
         SetStr(line, len)
-        
+
         IF len > 0
             y := self.conf.text_y +
                  self.font.baseline +
@@ -490,10 +490,10 @@ PROC load_text() OF ags HANDLE
             Move(self.rport, self.conf.text_x, y)
             Text(self.rport, line, len)
         ENDIF
-        
+
         INC linenum
     ENDWHILE
-    
+
 EXCEPT DO
     IF line THEN DisposeLink(line)
     IF fh THEN Close(fh)
@@ -518,21 +518,21 @@ PROC main() HANDLE
     DEF nav = NIL:PTR TO agsnav             -> Menu directory navigator.
     DEF ags = NIL:PTR TO ags                -> Application controller.
     DEF menu_pos = NIL:PTR TO agsmenupos
-    
+
     IF KickVersion(37) = FALSE THEN Raise(ERR_KICKSTART)
-    
+
     IF (lowlevelbase := OpenLibrary('lowlevel.library', 0)) = NIL THEN Raise("LOWL")
-    
+
     NEW conf.init()
     conf.read('AGS:AGS2.conf')
-    
+
     IF SetJoyPortAttrsA(1, [SJA_TYPE, SJA_TYPE_JOYSTK, 0]) = FALSE
         Raise(ERR_JOYSTICK)
     ENDIF
-    
+
     NEW loader.init()
     loader.start()
-    
+
     NEW il.init()
     IF il.open(conf.background) = FALSE THEN Raise(ERR_BACKGROUND)
     IF il.parse_header() = FALSE THEN Raise(ERR_BACKGROUND)
@@ -548,7 +548,7 @@ PROC main() HANDLE
     ELSE
         s_depth := conf.depth
     ENDIF
-    
+
     IF (s := OpenScreenTagList(NIL, [
             SA_WIDTH, s_width,
             SA_HEIGHT, s_height,
@@ -568,17 +568,17 @@ PROC main() HANDLE
             WA_RMBTRAP, TRUE,
             WA_ACTIVATE, TRUE,
             0])) = NIL THEN Raise(ERR_WINDOW)
-    
+
     pointer := NewM(4, MEMF_CHIP OR MEMF_CLEAR)
     SetPointer(w, pointer, 1, 1, 0, 0)
-    
+
     ta.name := conf.font_name
     ta.ysize := conf.font_size
     ta.style := 0
     ta.flags := 0
     IF (font := OpenFont(ta)) = NIL THEN Raise(ERR_FONT)
     SetFont(w.rport, font)
-    
+
     fade_out_vport(s.viewport, Shl(1, s_depth), 1) -> Clear palette to black.
     VideoControl(s.viewport.colormap, [VTAG_BORDERBLANK_SET, 0, 0])
     il.load_body(w.rport, 0, 0)
@@ -586,7 +586,7 @@ PROC main() HANDLE
     fade_in_vport(il.colormap, s.viewport, Shl(1, s_depth), 10)
     il.close()
     END il
-    
+
     loader.wait_port()
     reply := loader.send_cmd(AGSIL_SETRPORT, w.rport)
     reply := loader.send_cmd(AGSIL_SETVPORT, s.viewport)
@@ -599,18 +599,18 @@ PROC main() HANDLE
     */
     xy := Shl(conf.screenshot_x, 16) OR conf.screenshot_y
     reply := loader.send_cmd(AGSIL_SETXY, xy)
-    
+
     NEW menu_pos.init()
     menu_pos.read()
-    
+
     NEW nav.init()
     nav.set_path(menu_pos.path)
     nav.depth := menu_pos.depth
-    
+
     NEW ags.init(conf, nav, loader, w.rport, font)
     ags.select(menu_pos.offset, menu_pos.pos)
     fade_out_vport(s.viewport, Shl(1, s_depth), 10)
-    
+
     loader.stop()
 
 EXCEPT DO

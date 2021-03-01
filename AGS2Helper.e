@@ -46,7 +46,7 @@ ENDOBJECT
 PROC softint_handler(ldr:PTR TO loader)
     DEF msg:PTR TO agsil_msg
     DEF action
-    
+
     msg := GetMsg(ldr.port)
     msg.reply := 0
     action := msg.action
@@ -84,24 +84,24 @@ PROC main() HANDLE
     DEF softint = NIL:PTR TO is
     DEF wrapped_code
     DEF port = NIL:PTR TO mp
-    
+
     ->DEF bmark = NIL:PTR TO benchmark
     DEF il = NIL:PTR TO ilbmloader
     DEF path[PATH_LEN]:STRING
     DEF old_path[PATH_LEN]:STRING
     DEF curr_img = 0
-    
+
     -> Allocate the object that we share with the IRQ handler.
     ldr := NewM(SIZEOF loader, MEMF_PUBLIC OR MEMF_CLEAR)
     ldr.img_path := String(PATH_LEN)
-    
+
     -> Allocate and configure the soft interrupt structure.
     softint := NewM(SIZEOF is, MEMF_PUBLIC OR MEMF_CLEAR)
     IF (wrapped_code := eCodeSoftInt({softint_handler})) = NIL THEN Raise(ERR_ECODE)
     softint.code := wrapped_code
     softint.data := ldr
     softint.ln.pri := 0
-    
+
     -> Create a message port and publish it. Don't use createPort() or
     -> CreateMsgPort() since they allocate a signal for a PA_SIGNAL type port.
     -> We need PA_SOFTINT.
@@ -114,24 +114,24 @@ PROC main() HANDLE
     port.flags := PA_SOFTINT
     port.sigtask := softint
     AddPort(port)
-    
+
     -> Lower priority to run in the background.
     SetTaskPri(FindTask(NIL), -1)
-    
+
     -> ILBMLoader object.
     NEW il.init()
-    
+
     ->PrintF('AGSImgLoader is waiting for requests on \s, CTRL-C to stop.\n', AGSIL_PORTNAME)
     REPEAT
         -> Ctrl-C.
         IF CtrlC() THEN ldr.status := LDR_QUITTING
-        
+
         IF curr_img <> ldr.img_num
             Disable()
                 StrCopy(path, ldr.img_path)
                 curr_img := ldr.img_num
             Enable()
-            
+
             IF StrCmp(path, old_path)
                 ldr.img_loaded := curr_img
             ELSE
@@ -166,9 +166,9 @@ PROC main() HANDLE
         ELSE
             Delay(1)
         ENDIF
-        
+
     UNTIL ldr.status = LDR_QUITTING
-    
+
 EXCEPT DO
     END il
     IF port

@@ -58,7 +58,7 @@ ENDPROC
 
 PROC end() OF agsil_master
     DEF port:PTR TO mp
-    
+
     IF self.send_quit
         self.msg.action := AGSIL_QUIT
         self.msg.arg := NIL
@@ -78,7 +78,7 @@ ENDPROC
 PROC start() OF agsil_master
     DEF result
     DEF console
-    
+
     console := Open('CON:0/40/640/150/irqimgloader/auto/close/wait', OLDFILE)
     result := SystemTagList('AGS:AGS2Helper', [
         SYS_ASYNCH, TRUE,
@@ -93,7 +93,7 @@ ENDPROC
 
 PROC wait_port() OF agsil_master
     DEF count = 0
-    
+
     REPEAT
         IF FindPort(AGSIL_PORTNAME)
             RETURN
@@ -108,7 +108,7 @@ ENDPROC
 PROC send_cmd(action:LONG, arg:LONG) OF agsil_master
     DEF port:PTR TO mp
     DEF reply:PTR TO agsil_msg
-    
+
     self.msg.action := action
     IF action = AGSIL_QUIT
         self.send_quit := FALSE -> QUIT has already been sent, no need for
@@ -129,7 +129,7 @@ PROC stop() OF agsil_master IS self.send_cmd(AGSIL_QUIT, NIL)
 
 PROC wait_load(img_num:LONG) OF agsil_master
     DEF num
-    
+
     WHILE (num := self.send_cmd(AGSIL_GETIMGNUM, NIL)) <> img_num
         Delay(1)
     ENDWHILE

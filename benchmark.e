@@ -50,7 +50,7 @@ ENDPROC
 PROC msecs(mark:LONG) OF benchmark
     DEF ms_start
     DEF ms_end
-    
+
     ms_start := Mul(self.start_time.secs, 1000) + Div(self.start_time.micro, 1000)
     ms_end := Mul(self.end_time[mark].secs, 1000) + Div(self.end_time[mark].micro, 1000)
 ENDPROC ms_end - ms_start
@@ -59,7 +59,7 @@ ENDPROC ms_end - ms_start
 PROC usecs(mark:LONG) OF benchmark
     DEF us_start
     DEF us_end
-    
+
     us_start := Mul(self.start_time.secs, 1000000) + self.start_time.micro
     us_end := Mul(self.end_time[mark].secs, 1000000) + self.end_time[mark].micro
 ENDPROC us_end - us_start

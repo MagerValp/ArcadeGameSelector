@@ -23,7 +23,7 @@ EXPORT PROC fade_out_vport(vport:PTR TO viewport, max_colors:LONG, steps:LONG)
     DEF step
     DEF v
     DEF r, g, b
-    
+
     ncolors := Min(vport.colormap.count, max_colors)
     IF KickVersion(39)
         ncolors32 := (ncolors * 3) + 2
@@ -57,7 +57,7 @@ EXPORT PROC fade_out_vport(vport:PTR TO viewport, max_colors:LONG, steps:LONG)
             LoadRGB4(vport, fade4, ncolors)
         ENDFOR
     ENDIF
-    
+
     IF color32 THEN END color32[ncolors32]
     IF fade32 THEN END fade32[ncolors32]
     IF color4 THEN END color4[ncolors]
@@ -73,7 +73,7 @@ EXPORT PROC fade_in_vport(colors:PTR TO rgbcolor, vport:PTR TO viewport, max_col
     DEF i
     DEF step
     DEF r, g, b
-    
+
     ncolors := Min(vport.colormap.count, max_colors)
     IF KickVersion(39)
         ncolors32 := (ncolors * 3) + 2
@@ -101,7 +101,7 @@ EXPORT PROC fade_in_vport(colors:PTR TO rgbcolor, vport:PTR TO viewport, max_col
             LoadRGB4(vport, fade4, ncolors)
         ENDFOR
     ENDIF
-    
+
     IF fade32 THEN END fade32[ncolors32]
     IF fade4 THEN END fade4[ncolors]
 ENDPROC

@@ -31,22 +31,22 @@ EXPORT OBJECT agsconf
     font_name:LONG -> PTR TO STRING -> topaz.font
     font_size:INT -> = 8
     font_leading:INT -> = 0
-    
+
     menu_x:INT -> = 24
     menu_y:INT -> = 8
     menu_height:INT -> = 30
-    
+
     screenshot_x:INT -> = 304
     screenshot_y:INT -> = 8
     empty_screenshot:LONG -> PTR TO STRING -> AGS:Empty.iff
-    
+
     text_x:INT
     text_y:INT
     text_width:INT
     text_height:INT
     text_color:INT -> = 255
     text_background:INT -> = 254
-    
+
     blue_button_action:LONG -> AGSCONF_ACTION_QUIT
 ENDOBJECT
 
@@ -55,31 +55,31 @@ PROC init() OF agsconf
     self.background := String(128)
     self.font_name := String(32)
     self.empty_screenshot := String(128)
-    
+
     StrCopy(self.background, 'AGS:AGS2Background.iff')
     self.mode := AGSCONF_AUTODETECT
     self.depth := AGSCONF_AUTODETECT
     self.text_color := 255
     self.text_background := 254
     self.lock_colors := 4
-    
+
     StrCopy(self.font_name, 'topaz.font')
     self.font_size := 8
     self.font_leading := 0
-    
+
     self.menu_x := 24
     self.menu_y := 8
     self.menu_height := 30
-    
+
     self.screenshot_x := 304
     self.screenshot_y := 8
     StrCopy(self.empty_screenshot, 'AGS:Empty.iff')
-    
+
     self.text_x := 304
     self.text_y := 144
     self.text_width := 40
     self.text_height := (248 - self.text_y) / self.font_size
-    
+
     self.blue_button_action := AGSCONF_ACTION_QUIT
 ENDPROC
 
@@ -91,7 +91,7 @@ ENDPROC
 
 PROC set_value(key:PTR TO CHAR, value:PTR TO CHAR) OF agsconf
     DEF num, read
-    
+
     IF StrCmp(key, 'background')
         StrCopy(self.background, value)
     ELSEIF StrCmp(key, 'font')
@@ -158,7 +158,7 @@ PROC read(filename:PTR TO CHAR) OF agsconf HANDLE
     DEF pos
     DEF key[32]:STRING
     DEF value[96]:STRING
-    
+
     IF (fh := Open(filename, OLDFILE)) = NIL
         IF IoErr() = 205
             Raise(0)
@@ -167,7 +167,7 @@ PROC read(filename:PTR TO CHAR) OF agsconf HANDLE
             Throw(AGSCONF_ERROR, AGSCONF_ERR_READ)
         ENDIF
     ENDIF
-    
+
     IF KickVersion(39)
         bufsize := BUFSIZE
     ELSE
@@ -177,7 +177,7 @@ PROC read(filename:PTR TO CHAR) OF agsconf HANDLE
     -> Read a line at a time, max BUFSIZE - 1 characters per line.
     WHILE Fgets(fh, line, bufsize)
         INC linenum
-        
+
         len := StrLen(line)
         -> Trim trailing newline.
         IF len > 0
@@ -189,7 +189,7 @@ PROC read(filename:PTR TO CHAR) OF agsconf HANDLE
         -> Fix estring length.
         SetStr(line, len)
         ->PrintF('Config line \d: "\s"\n', linenum, line)
-        
+
         IF len = 0
             -> Skip empty lines.
         ELSEIF line[0] = "#"
@@ -206,7 +206,7 @@ PROC read(filename:PTR TO CHAR) OF agsconf HANDLE
             len := EstrLen(key)
             WHILE (len > 0) AND (key[len - 1] = " ") DO DEC len
             SetStr(key, len)
-            
+
             -> Copy right hand side as the config value, skipping leading
             -> spaces.
             INC pos
@@ -219,12 +219,12 @@ PROC read(filename:PTR TO CHAR) OF agsconf HANDLE
             len := EstrLen(value)
             WHILE (len > 0) AND (value[len - 1] = " ") DO DEC len
             SetStr(value, len)
-            
+
             self.set_value(key, value)
         ENDIF
-        
+
     ENDWHILE
-    
+
 EXCEPT DO
     IF fh THEN Close(fh)
     IF exception
