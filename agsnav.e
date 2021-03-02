@@ -77,7 +77,7 @@ ENDPROC
 PROC compare_items(item1:PTR TO agsnav_item, item2:PTR TO agsnav_item)
     IF item2.type > item1.type THEN RETURN 1
     IF item2.type < item1.type THEN RETURN -1
-ENDPROC OstrCmp(item1.name, item2.name)
+ENDPROC str_compare(item1.name, item2.name)
 
 -> Insert the item into a sorted list, with directories before files.
 PROC add_item(name:PTR TO CHAR, type:LONG) OF agsnav
@@ -122,6 +122,41 @@ PROC str_ends_with(str, suffix)
     suffix_len := StrLen(suffix)
     IF str_len < suffix_len THEN RETURN FALSE
 ENDPROC InStr(str, suffix, str_len - suffix_len) <> -1
+
+-> Compare strings (case insensitive, custom symbol order)
+PROC str_compare(a, b)
+    DEF lut:PTR TO CHAR
+    WHILE a[]
+        IF a[] <> b[]
+            lut := {latin1_sorting_lut}
+            IF lut[a[]] < lut[b[]] THEN RETURN 1
+            RETURN -1
+        ENDIF
+        INC a
+        INC b
+    ENDWHILE
+    IF b[] > 0 THEN RETURN 1
+    RETURN 0
+ENDPROC
+
+-> Sorting table for str_compare()
+latin1_sorting_lut:
+    CHAR $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+    CHAR $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+    CHAR $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0a,$0b,$0c,$0d,$0e,$0f
+    CHAR $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$88,$89,$8a,$8b,$8c,$8d
+    CHAR $8e,$1a,$24,$26,$2a,$2c,$36,$38,$3a,$3c,$46,$48,$4a,$4c,$4e,$52
+    CHAR $5c,$5e,$60,$62,$65,$67,$71,$73,$75,$77,$7c,$8f,$90,$91,$92,$93
+    CHAR $94,$1b,$25,$27,$2b,$2d,$37,$39,$3b,$3d,$47,$49,$4b,$4d,$4f,$53
+    CHAR $5d,$5f,$61,$63,$66,$68,$72,$74,$76,$78,$7d,$95,$96,$97,$98,$00
+    CHAR $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+    CHAR $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+    CHAR $00,$99,$9a,$9b,$9c,$9d,$9e,$9f,$a0,$a1,$a2,$a3,$a4,$00,$a5,$a6
+    CHAR $a7,$a8,$a9,$aa,$ab,$ac,$ad,$ae,$af,$b0,$b1,$b2,$b3,$b4,$b5,$b6
+    CHAR $1c,$1e,$20,$22,$80,$7e,$82,$28,$2e,$30,$32,$34,$3e,$40,$42,$44
+    CHAR $b7,$50,$54,$56,$58,$5a,$84,$b8,$86,$69,$6b,$6d,$6f,$79,$b9,$64
+    CHAR $1d,$1f,$21,$23,$81,$7f,$83,$29,$2f,$31,$33,$35,$3f,$41,$43,$45
+    CHAR $ba,$51,$55,$57,$59,$5b,$85,$bb,$87,$6a,$6c,$6e,$70,$7a,$bc,$7b
 
 
 -> Clear the current menu, read the current directory, and add all menu items.
