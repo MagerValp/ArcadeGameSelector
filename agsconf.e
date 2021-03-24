@@ -48,6 +48,10 @@ EXPORT OBJECT agsconf
     text_background:INT -> = 254
 
     blue_button_action:LONG -> AGSCONF_ACTION_QUIT
+
+    slideshow_delay_secs:INT -> = 0 (disabled)
+    slideshow_start_index:INT -> = 1
+    slideshow_end_index:INT -> = 7
 ENDOBJECT
 
 -> Initialize with default configuration.
@@ -81,6 +85,10 @@ PROC init() OF agsconf
     self.text_height := (248 - self.text_y) / self.font_size
 
     self.blue_button_action := AGSCONF_ACTION_QUIT
+
+    self.slideshow_delay_secs := 0
+    self.slideshow_start_index := 1
+    self.slideshow_end_index := 7
 ENDPROC
 
 PROC end() OF agsconf
@@ -141,6 +149,12 @@ PROC set_value(key:PTR TO CHAR, value:PTR TO CHAR) OF agsconf
             self.text_width := num
         ELSEIF StrCmp(key, 'text_height')
             self.text_height := num
+        ELSEIF StrCmp(key, 'slideshow_delay_secs')
+            self.slideshow_delay_secs := num
+        ELSEIF StrCmp(key, 'slideshow_start_index')
+            self.slideshow_start_index := num
+        ELSEIF StrCmp(key, 'slideshow_end_index')
+            self.slideshow_end_index := num
         ELSE
             Throw(AGSCONF_ERROR, AGSCONF_ERR_UNKNOWN)
         ENDIF

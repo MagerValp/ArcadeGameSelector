@@ -431,12 +431,8 @@ ENDPROC
 PROC load_screenshot() OF ags
     DEF path[100]:STRING
 
-    self.get_item_path(path, '.iff')
-    IF FileLength(path) = -1
-        self.loader.send_cmd(AGSIL_LOAD, self.conf.empty_screenshot)
-    ELSE
-        self.loader.send_cmd(AGSIL_LOAD, path)
-    ENDIF
+    self.get_item_path(path, '')
+    self.loader.send_cmd(AGSIL_LOAD, path)
 ENDPROC
 
 PROC load_text() OF ags HANDLE
@@ -514,7 +510,6 @@ PROC main() HANDLE
     DEF font = NIL:PTR TO textfont
     DEF loader = NIL:PTR TO agsil_master    -> Background image loader master object.
     DEF reply
-    DEF xy
     DEF nav = NIL:PTR TO agsnav             -> Menu directory navigator.
     DEF ags = NIL:PTR TO ags                -> Application controller.
     DEF menu_pos = NIL:PTR TO agsmenupos
@@ -591,14 +586,13 @@ PROC main() HANDLE
     reply := loader.send_cmd(AGSIL_SETRPORT, w.rport)
     reply := loader.send_cmd(AGSIL_SETVPORT, s.viewport)
     reply := loader.send_cmd(AGSIL_SETMAXCOLORS, Shl(1, s_depth) - conf.lock_colors)
+    reply := loader.send_cmd(AGSIL_SETCONF, conf)
     /* We loaded the background image directly using ilbmloader instead.
     reply := loader.send_cmd(AGSIL_SETXY, 0)
     reply := loader.send_cmd(AGSIL_LOAD, bkg_img)
     IF reply < 0 THEN Raise(ERR_BACKGROUND)
     loader.wait_load(reply)
     */
-    xy := Shl(conf.screenshot_x, 16) OR conf.screenshot_y
-    reply := loader.send_cmd(AGSIL_SETXY, xy)
 
     NEW menu_pos.init()
     menu_pos.read()

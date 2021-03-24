@@ -53,11 +53,13 @@ EXPORT OBJECT ilbmloader
     iff:PTR TO iffhandle
 
     width:INT
+    last_width:INT
     height:INT
+    last_height:INT
     depth:CHAR
+    last_depth:CHAR
     masking:CHAR
     compression:CHAR
-    _pad:CHAR
 
     ncolors:LONG
     colormap:PTR TO rgbcolor
@@ -65,6 +67,9 @@ EXPORT OBJECT ilbmloader
     mode:LONG
 
     is_open:INT
+
+    bm:PTR TO bitmap
+    planeptr:PTR TO CHAR
 ENDOBJECT
 
 EXPORT PROC init() OF ilbmloader
@@ -82,6 +87,18 @@ PROC end() OF ilbmloader
     IF self.is_open THEN self.close()
     IF self.iff THEN FreeIFF(self.iff)
     IF iffparsebase THEN CloseLibrary(iffparsebase)
+    IF self.bm THEN self.free_in_memory_bitmap()
+ENDPROC
+
+PROC free_in_memory_bitmap() OF ilbmloader
+    IF KickVersion(39)
+        FreeBitMap(self.bm)
+    ELSE
+        FreeRaster(self.planeptr, self.last_width * self.last_depth, self.last_height)
+        END self.bm
+    ENDIF
+
+    self.bm := NIL
 ENDPROC
 
 -> Open an IFF image for reading.
@@ -196,30 +213,44 @@ ENDPROC
 
 -> Load image body into raster port at x, y.
 EXPORT PROC load_body(rport:PTR TO rastport, x:LONG, y:LONG) OF ilbmloader
-    DEF bm = NIL:PTR TO bitmap
-    DEF planeptr:PTR TO CHAR
     DEF ctxnode:PTR TO contextnode
     DEF cdata:PTR TO CHAR
     DEF i
 
-    -> Allocate a one raster line high bitmap to be used for blitting.
-    IF KickVersion(39)
-        bm := AllocBitMap(self.width, 1, self.depth, BMF_INTERLEAVED, rport)
-    ELSE
-        -> For Kickstart 2.0 we have to allocate and initialize the bitmap manually.
-        NEW bm
-        -> Width has to be multiplied by depth to match AllocBitMap.
-        InitBitMap(bm, self.depth, self.width * self.depth, 1)
-        -> Allocate a single raster but assign each line to the bm.planes.
-        -> This emulates BMF_INTERLEAVED.
-        IF (planeptr := AllocRaster(self.width, self.depth)) = NIL
-            END bm
-            Throw(ILBM_ERROR, ERR_IFF_ALLOCRASTER)
-        ENDIF
-        FOR i := 0 TO bm.depth - 1
-            bm.planes[i] := planeptr + ((bm.bytesperrow / bm.depth) * i)
-        ENDFOR
+    IF self.bm AND (self.width <> self.last_width OR self.height <> self.last_height OR self.depth <> self.last_depth)
+        -> We have a preallocated in-memory bitmap, but it's not the right size or
+        -> depth for this new image, so free it so that it'll be reallocated below
+        self.free_in_memory_bitmap()
     ENDIF
+
+    IF self.bm = NIL
+        -> Allocate an in-memory bitmap to be used for blitting.
+        IF KickVersion(39)
+            self.bm := AllocBitMap(self.width, self.height, self.depth, BMF_INTERLEAVED, rport)
+        ELSE
+            -> For Kickstart 2.0 we have to allocate and initialize the bitmap manually.
+            NEW self.bm
+            -> Width has to be multiplied by depth to match AllocBitMap.
+            InitBitMap(self.bm, self.depth, self.width * self.depth, self.height)
+            -> Width also has to be multiplied by depth here too.
+            self.planeptr := AllocRaster(self.width * self.depth, self.height)
+            IF self.planeptr = NIL
+                END self.bm
+                Throw(ILBM_ERROR, ERR_IFF_ALLOCRASTER)
+            ENDIF
+            -> Assign each line to the bm.planes. This emulates BMF_INTERLEAVED.
+            FOR i := 0 TO self.bm.depth - 1
+                self.bm.planes[i] := self.planeptr + ((self.bm.bytesperrow / self.bm.depth) * i)
+            ENDFOR
+        ENDIF
+    ENDIF
+
+    -> Keep a copy of the width, height and depth of this image
+    -> which will be checked and used if we load another image
+    self.last_width := self.width
+    self.last_height := self.height
+    self.last_depth := self.depth
+
     /*
     PrintF('bm = $\h[08]\n', bm)
     PrintF('bm.bytesperrow = \d\n', bm.bytesperrow)
@@ -232,18 +263,20 @@ EXPORT PROC load_body(rport:PTR TO rastport, x:LONG, y:LONG) OF ilbmloader
     */
     -> Load the chunk data.
     ctxnode := CurrentChunk(self.iff)
-    NEW cdata[ctxnode.size]
-    ReadChunkBytes(self.iff, cdata, ctxnode.size)
-    -> Unpack and blit into raster port.
-    self.ilbm_body_unpack(cdata, bm, rport, x, y)
-    -> Free chunk data.
-    END cdata[ctxnode.size]
 
-    IF KickVersion(39)
-        FreeBitMap(bm)
+    -> Check if image is RLE compressed
+    IF self.compression = COMPRESSION_BYTERUN1
+        NEW cdata[ctxnode.size]
+        ReadChunkBytes(self.iff, cdata, ctxnode.size)
+        -> Unpack and blit into raster port.
+        self.ilbm_body_unpack(cdata, self.bm, rport, x, y)
+        -> Free chunk data.
+        END cdata[ctxnode.size]
     ELSE
-        FreeRaster(planeptr, self.width, self.depth)
-        END bm
+        -> Read the data directly into the bitmap (image must not be compressed)
+        ReadChunkBytes(self.iff, self.bm.planes[0], ctxnode.size)
+        -> Blit into raster port.
+        BltBitMapRastPort(self.bm, 0, 0, rport, x, y, self.width, self.height, $0c0)
     ENDIF
 ENDPROC
 
@@ -271,35 +304,33 @@ PROC ilbm_body_unpack(cdata:PTR TO CHAR,
     -> Unpack image line by line.
     FOR line := 0 TO self.height - 1
         buf_ptr := line_buffer
-        IF self.compression = COMPRESSION_BYTERUN1
-            bytes_left := bytes_per_line
-            REPEAT
-                cmd := cdata[]++
-                SELECT 256 OF cmd
-                    CASE $80
-                        -> $80 bytes are ignored.
-                    CASE $81 TO $ff
-                        -> -1 to -127 => repeat next byte -n + 1 times
-                        byte := cdata[]++
-                        cmd := 256 - cmd
-                        FOR i := 0 TO cmd
-                            buf_ptr[]++ := byte
-                        ENDFOR
-                        bytes_left := bytes_left - (cmd + 1)
-                    DEFAULT
-                        FOR i := 0 TO cmd
-                            buf_ptr[]++ := cdata[]++
-                        ENDFOR
-                        bytes_left := bytes_left - (cmd + 1)
-                ENDSELECT
-            UNTIL bytes_left < 1
-        ELSE
-            FOR i := 0 TO bytes_per_line - 1
-                buf_ptr[]++ := cdata[]++
-            ENDFOR
-        ENDIF
-        CopyMem(line_buffer, bm.planes[0], bm.bytesperrow)
-        BltBitMapRastPort(bm, 0, 0, rport, x, line + y, self.width, 1, $0c0)
+        bytes_left := bytes_per_line
+        REPEAT
+            cmd := cdata[]++
+            SELECT 256 OF cmd
+                CASE $80
+                    -> $80 bytes are ignored.
+                CASE $81 TO $ff
+                    -> -1 to -127 => repeat next byte -n + 1 times
+                    byte := cdata[]++
+                    cmd := 256 - cmd
+                    FOR i := 0 TO cmd
+                        buf_ptr[]++ := byte
+                    ENDFOR
+                    bytes_left := bytes_left - (cmd + 1)
+                DEFAULT
+                    FOR i := 0 TO cmd
+                        buf_ptr[]++ := cdata[]++
+                    ENDFOR
+                    bytes_left := bytes_left - (cmd + 1)
+            ENDSELECT
+        UNTIL bytes_left < 1
+
+        CopyMem(line_buffer, bm.planes[0] + (bm.bytesperrow * line), bm.bytesperrow)
     ENDFOR
+
+    -> Now that the bitmap is completely unpacked into memory, blit it to the raster port
+    BltBitMapRastPort(bm, 0, 0, rport, x, y, self.width, self.height, $0c0)
+
     END line_buffer
 ENDPROC
