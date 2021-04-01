@@ -164,6 +164,14 @@ EXPORT PROC parse_header() OF ilbmloader
     self.compression := bmhd.compression
     ->self.transparentcolor := bmhd.transparentcolor
 
+    -> If this is the first image we've loaded, then just initialise the
+    -> last width and height properties with the values from the first image.
+    IF self.bm = NIL
+        self.last_width := bmhd.w
+        self.last_height := bmhd.h
+        self.last_depth := bmhd.nplanes
+    ENDIF
+
     IF (sp := FindProp(self.iff, "ILBM", "CMAP")) <> NIL
         self.ncolors := Min(sp.size / 3, Shl(1, self.depth))
         NEW self.colormap[self.ncolors]

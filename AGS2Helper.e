@@ -255,13 +255,13 @@ PROC main() HANDLE
                     ELSE
                         fade_out_vport(ldr.vport, ldr.max_colors, 5)
 
-                        -> Erase the background behind any last image displayed
+                        -> Erase the area behind any last image displayed
                         SetAPen(ldr.rport, 0)
                         RectFill(ldr.rport,
                                  ldr.conf.screenshot_x,
                                  ldr.conf.screenshot_y,
-                                 ldr.conf.screenshot_x + il.last_width,
-                                 ldr.conf.screenshot_y + il.last_height)
+                                 ldr.conf.screenshot_x + il.last_width - 1,
+                                 ldr.conf.screenshot_y + il.last_height - 1)
 
                         ->il.load_cmap(ldr.vport, ldr.max_colors)
                         ->bmark.mark() -> 0
