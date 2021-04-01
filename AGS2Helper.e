@@ -17,9 +17,12 @@ MODULE 'graphics/view'
 MODULE '*agsil'
 MODULE '*ilbmloader'
 MODULE '*palfade'
+MODULE '*agsconf'
+MODULE 'devices/timer'
+MODULE 'exec/io'
 
 
-ENUM ERR_NONE, ERR_ECODE, ERR_CREATEPORT
+ENUM ERR_NONE, ERR_ECODE, ERR_CREATEPORT, ERR_CREATETIMER
 
 ENUM LDR_LOADING, LDR_QUITTING
 
@@ -31,14 +34,14 @@ OBJECT loader
     status:LONG
     rport:PTR TO rastport
     vport:PTR TO viewport
-    x:INT
-    y:INT
+    conf:PTR TO agsconf
     max_colors:INT
     img_num:LONG
     img_path
     img_loaded:LONG
 ENDOBJECT
 
+DEF item_changed = 0
 
 -> This will be called every time a software interrupt is triggered.
 -> Does not need to be reentrant and the main task is suspended while it
@@ -57,9 +60,8 @@ PROC softint_handler(ldr:PTR TO loader)
             ldr.rport := msg.arg
         CASE AGSIL_SETVPORT
             ldr.vport := msg.arg
-        CASE AGSIL_SETXY
-            ldr.x := Shr(msg.arg, 16)
-            ldr.y := msg.arg AND $ffff
+        CASE AGSIL_SETCONF
+            ldr.conf := msg.arg
         CASE AGSIL_SETMAXCOLORS
             ldr.max_colors := msg.arg
         CASE AGSIL_LOAD
@@ -67,6 +69,7 @@ PROC softint_handler(ldr:PTR TO loader)
                 msg.reply := -1
             ELSE
                 ldr.img_num := ldr.img_num + 1
+                item_changed := 1
                 msg.reply := ldr.img_num
                 StrCopy(ldr.img_path, msg.arg)
             ENDIF
@@ -90,6 +93,17 @@ PROC main() HANDLE
     DEF path[PATH_LEN]:STRING
     DEF old_path[PATH_LEN]:STRING
     DEF curr_img = 0
+
+    -> Slideshow vars
+    DEF tr:PTR TO timerequest
+    DEF timer_msgport:PTR TO mp
+    DEF timer_sig = 0
+    DEF timer_activated = 0
+    DEF slideshow_index = 0
+    DEF slideshow_range_size = 0
+    DEF i = 0
+    DEF indexstring[2]:STRING
+    DEF have_indexed_image = 0
 
     -> Allocate the object that we share with the IRQ handler.
     ldr := NewM(SIZEOF loader, MEMF_PUBLIC OR MEMF_CLEAR)
@@ -121,15 +135,113 @@ PROC main() HANDLE
     -> ILBMLoader object.
     NEW il.init()
 
+    -> Wait until we have received the config from the Menu executable before continuing
+    REPEAT
+        Delay(1)
+    UNTIL ldr.conf <> NIL
+
+    -> Only setup the slideshow if the feature is enabled
+    IF ldr.conf.slideshow_delay_secs > 0
+        slideshow_index := ldr.conf.slideshow_start_index
+        slideshow_range_size := ldr.conf.slideshow_end_index - ldr.conf.slideshow_start_index
+
+        -> Create the slideshow timer
+        IF timer_msgport := CreateMsgPort()
+            IF tr := CreateIORequest(timer_msgport, SIZEOF timerequest)
+                IF OpenDevice('timer.device', UNIT_MICROHZ, tr, 0) = 0
+                    timer_sig := Shl(1, timer_msgport.sigbit)
+                    tr.io.command := TR_ADDREQUEST
+                ELSE
+                    DeleteIORequest(tr)
+                    Raise(ERR_CREATETIMER)
+                ENDIF
+            ELSE
+                DeleteMsgPort(timer_msgport)
+                Raise(ERR_CREATETIMER)
+            ENDIF
+        ELSE
+            Raise(ERR_CREATETIMER)
+        ENDIF
+    ENDIF
+
     ->PrintF('AGSImgLoader is waiting for requests on \s, CTRL-C to stop.\n', AGSIL_PORTNAME)
     REPEAT
         -> Ctrl-C.
         IF CtrlC() THEN ldr.status := LDR_QUITTING
 
+        -> Check for slideshow timer event
+        IF timer_sig
+            WHILE GetMsg(timer_msgport) = tr
+                -> Send a new timer request
+                tr.time.secs := ldr.conf.slideshow_delay_secs
+                SendIO(tr)
+
+                ldr.img_num := ldr.img_num + 1
+            ENDWHILE
+        ENDIF
+
         IF curr_img <> ldr.img_num
             Disable()
-                StrCopy(path, ldr.img_path)
                 curr_img := ldr.img_num
+                have_indexed_image := 0
+
+                -> Only look for indexed screenshots if slideshow is enabled
+                IF ldr.conf.slideshow_delay_secs > 0
+                    -> If the list item has changed, then we
+                    -> must reset the start index and timer
+                    IF item_changed = 1
+                        slideshow_index := ldr.conf.slideshow_start_index
+
+                        -> If the timer has been activated at least
+                        -> once, then cancel any pending request
+                        IF timer_activated = 1
+                            AbortIO(tr) -> end the last timer request
+                            WaitIO(tr)  -> wait for it to end
+                        ENDIF
+
+                        -> Send a new timer request
+                        tr.time.secs := ldr.conf.slideshow_delay_secs
+                        SendIO(tr)
+
+                        timer_activated := 1
+                        item_changed := 0
+                    ENDIF
+
+                    -> Try to find an indexed screenshot
+                    FOR i := 0 TO slideshow_range_size
+                        StrCopy(path, ldr.img_path)
+                        StringF(indexstring, '-\d', slideshow_index)
+                        StrAdd(path, indexstring)
+                        StrAdd(path, '.iff')
+
+                        slideshow_index := slideshow_index + 1
+
+                        -> Make sure we honour the end index configuration
+                        IF slideshow_index = (ldr.conf.slideshow_end_index + 1)
+                            slideshow_index := ldr.conf.slideshow_start_index
+                        ENDIF
+
+                        -> Check if file exists
+                        IF FileLength(path) <> -1
+                            have_indexed_image := 1
+                        ENDIF
+
+                        -> Exit the for loop if we've found an image
+                        EXIT have_indexed_image = 1
+                    ENDFOR
+                ENDIF
+
+                -> If we haven't got an indexed image, fallback to standard file naming
+                IF have_indexed_image = 0
+                    StrCopy(path, ldr.img_path)
+                    StrAdd(path, '.iff')
+
+                    IF FileLength(path) = -1
+                        -> Still didn't find an image file with standard
+                        -> naming, so just show the empty screenshot
+                        StrCopy(path, ldr.conf.empty_screenshot)
+                    ENDIF
+                ENDIF
             Enable()
 
             IF StrCmp(path, old_path)
@@ -137,20 +249,23 @@ PROC main() HANDLE
             ELSE
                 IF il.open(path)
                     ->NEW bmark.init(10)
-                    fade_out_vport(ldr.vport, ldr.max_colors, 5)
                     ->bmark.start()
                     IF il.parse_header() = FALSE
                         PrintF('\s failed header parsing\n', path)
                     ELSE
+                        fade_out_vport(ldr.vport, ldr.max_colors, 5)
+
+                        -> Erase the area behind any last image displayed
                         SetAPen(ldr.rport, 0)
                         RectFill(ldr.rport,
-                                 ldr.x,
-                                 ldr.y,
-                                 ldr.x + il.width - 1,
-                                 ldr.y + il.height - 1)
+                                 ldr.conf.screenshot_x,
+                                 ldr.conf.screenshot_y,
+                                 ldr.conf.screenshot_x + il.last_width - 1,
+                                 ldr.conf.screenshot_y + il.last_height - 1)
+
                         ->il.load_cmap(ldr.vport, ldr.max_colors)
                         ->bmark.mark() -> 0
-                        il.load_body(ldr.rport, ldr.x, ldr.y)
+                        il.load_body(ldr.rport, ldr.conf.screenshot_x, ldr.conf.screenshot_y)
                         ->bmark.mark() -> 1
                         fade_in_vport(il.colormap, ldr.vport, ldr.max_colors, 5)
                         ->PrintF('\s loaded in \d ms\n', path, bmark.msecs(1))
@@ -168,6 +283,19 @@ PROC main() HANDLE
         ENDIF
 
     UNTIL ldr.status = LDR_QUITTING
+
+    IF ldr.conf.slideshow_delay_secs > 0
+        -> Cancel any pending timer request
+        IF timer_activated = 1
+            AbortIO(tr) -> end the last timer request
+            WaitIO(tr) -> wait for it to end
+        ENDIF
+
+        -> Now close the device and delete the IO request and message ports
+        CloseDevice(tr)
+        DeleteIORequest(tr)
+        DeleteMsgPort(timer_msgport)
+    ENDIF
 
 EXCEPT DO
     END il
@@ -189,6 +317,8 @@ EXCEPT DO
             PrintF('Couldn''t create "' + AGSIL_PORTNAME + '"\n')
         CASE ILBM_ERROR
             PrintF('\s\n', ilbm_strerror(exceptioninfo))
+        CASE ERR_CREATETIMER
+            PrintF('Failed to create slideshow timer\n')
         DEFAULT
             IF exception
                 IF exception < 10000

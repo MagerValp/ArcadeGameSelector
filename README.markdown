@@ -26,6 +26,7 @@ For users of version 1 a number of things have improved:
 * Configurable screen layout.
 * Better control over colors.
 * Screenshots are loaded in a background task, keeping the interface responsive.
+* Support for screenshot slideshow.
 
 
 System Requirements
@@ -51,7 +52,7 @@ However, games compatibility with the minimum setup will be low. The recommended
 Installation
 ------------
 
-Copy `AGS2`, `AGS2Helper`, `AGS2.conf`, `AGS2Background.iff`, and `Empty.iff` into `AGS:`. Copy `Startup-Sequence` to `S:` for AGS to start automatically. For each game that you wish to run create a script with the commands necessary to start it and give it a `.run` extension. You can also add a screenshot with a `.iff` extension and information with a `.txt` extension.
+Copy `AGS2`, `AGS2Helper`, `AGS2.conf`, `AGS2Background.iff`, and `Empty.iff` into `AGS:`. Copy `Startup-Sequence` to `S:` for AGS to start automatically. For each game that you wish to run, create a script with the commands necessary to start it and give it a `.run` extension. You can also add a screenshot with a `.iff` extension and information with a `.txt` extension.
 
 Place AGS:AGS2 in the Startup-Sequence after SetPatch, Assign AGS: and whatever customizations you need:
 
@@ -83,6 +84,8 @@ Screenshots and Colors
 
 The menu's screenmode, depth, palette, and colors are configurable. By default the screenmode and depth are copied from the background image, and text is rendered with the last color of the palette (255) and the second to last color (254) is used for the text's background. All of these can be configured in `AGS2.conf`. When screenshots are loaded the palette is also loaded, so to keep the screenshots from changing the colors of the user interface you can use the `lock_colors` options to lock the last colors in the palette.
 
+AGS2 also implements a slideshow feature which allows you to use multiple screenshot images for each entry. The format to use for the filenames is `[ENTRY_NAME]-[X].iff`, where `[X]` is the numerical index (e.g. `Agony-1.iff`, `Agony-2.iff` etc). If the slidehow feature is enabled, AGS2 will look for indexed images within the configured numerical range. If no matching indexed images are found, or the slideshow feature is disabled, then it will attempt to find a file with the standard naming of `[ENTRY_NAME].iff` (e.g. `Agony.iff`). For optimum performance, it is recommended to use non-compressed (non-RLE) images if storage space is not a primary concern. Furthermore, although AGS2 can support mixed resolution screenshots, having the images in a standardized resolution will also produce the best visual results.
+
 
 Configuration
 -------------
@@ -113,6 +116,16 @@ Configuration
     screenshot_x = 304
     screenshot_y = 8
     empty_screenshot = AGS:Empty.iff
+
+    # Slideshow delay in seconds
+    # Set to zero to disable the slideshow feature
+    slideshow_delay_secs = 3
+
+    # Any image with an index greater than or equal to this value will be displayed
+    slideshow_start_index = 1
+
+    # Any image with an index less than or equal to this value will be displayed
+    slideshow_end_index = 7
 
 ### *Information text display*
     text_x = 304
