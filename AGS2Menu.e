@@ -116,8 +116,8 @@ PROC select(init_offset, init_pos) OF ags
 
     DEF item:PTR TO agsnav_item
     DEF index
-    DEF path[100]:STRING
-    DEF prev_item[100]:STRING
+    DEF path[255]:STRING
+    DEF prev_item[255]:STRING
     DEF pos, len
     DEF should_redraw = 0
     DEF menu_pos = NIL:PTR TO agsmenupos
@@ -256,7 +256,7 @@ PROC select(init_offset, init_pos) OF ags
                     self.nav.depth := self.nav.depth - 1
                     self.reload(0, 0, prev_item)
                     screenshot_ctr := 0
-                ELSEIF self.nav.depth < 2
+                ELSEIF self.nav.depth < 6
                     StrCopy(path, self.nav.path)
                     StrAdd(path, item.name)
                     StrAdd(path, '.ags/')
